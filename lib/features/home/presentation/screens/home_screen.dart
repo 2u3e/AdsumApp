@@ -1,15 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/share_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../work_orders/data/mock_work_orders.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final GlobalKey _heroCardKey = GlobalKey();
+  bool _isSharing = false;
+
+  Future<void> _shareReport() async {
+    if (_isSharing) return;
+    setState(() => _isSharing = true);
+    HapticFeedback.lightImpact();
+
+    try {
+      final boundary = _heroCardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        setState(() => _isSharing = false);
+        return;
+      }
+
+      // Kisa gecikme - paylaş butonunun saf kart görünümünde çekilmesi icin
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      final now = DateTime.now();
+      const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+      final dateStr = '${now.day} ${months[now.month - 1]} ${now.year}';
+
+      await ShareService.captureAndShare(
+        boundary,
+        text: 'ADSUM İş Emri Raporu - $dateStr',
+        subject: 'ADSUM Rapor',
+        fileName: 'adsum_rapor',
+      );
+    } finally {
+      if (mounted) setState(() => _isSharing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final stats = DashboardStats.fromWorkOrders(mockWorkOrders);
 
@@ -51,50 +92,84 @@ class HomeScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          final shell = StatefulNavigationShell.of(context);
-                          shell.goBranch(2);
-                        },
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.gray800 : AppColors.gray100,
-                            borderRadius: BorderRadius.circular(14),
+                      Row(
+                        children: [
+                          // Paylas butonu
+                          GestureDetector(
+                            onTap: _shareReport,
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.gray800 : AppColors.gray100,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: _isSharing
+                                  ? Center(
+                                      child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: isDark ? AppColors.gray300 : AppColors.gray600,
+                                        ),
+                                      ),
+                                    )
+                                  : Icon(Icons.ios_share_rounded, size: 20,
+                                      color: isDark ? AppColors.gray300 : AppColors.gray600),
+                            ),
                           ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(Icons.notifications_outlined, size: 22,
-                                  color: isDark ? AppColors.gray300 : AppColors.gray600),
-                              Positioned(
-                                right: 11, top: 10,
-                                child: Container(
-                                  width: 8, height: 8,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.error,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: isDark ? AppColors.gray800 : AppColors.gray100,
-                                      width: 1.5,
+                          const SizedBox(width: 10),
+                          // Bildirim butonu
+                          GestureDetector(
+                            onTap: () {
+                              final shell = StatefulNavigationShell.of(context);
+                              shell.goBranch(2);
+                            },
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.gray800 : AppColors.gray100,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Icon(Icons.notifications_outlined, size: 22,
+                                      color: isDark ? AppColors.gray300 : AppColors.gray600),
+                                  Positioned(
+                                    right: 11, top: 10,
+                                    child: Container(
+                                      width: 8, height: 8,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.error,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isDark ? AppColors.gray800 : AppColors.gray100,
+                                          width: 1.5,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                // Hero rapor karti - 5 veri
+                // Hero rapor karti - RepaintBoundary ile paylaşım için
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _HeroStatsCard(stats: stats),
+                  child: RepaintBoundary(
+                    key: _heroCardKey,
+                    child: _HeroStatsCard(stats: stats),
+                  ),
                 ),
                 const SizedBox(height: 28),
 
