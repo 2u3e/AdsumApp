@@ -38,8 +38,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profil')),
+      extendBody: true,
       body: SingleChildScrollView(
-        padding: AppSpacing.screenPadding,
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 120),
         child: Column(
           children: [
             AppSpacing.verticalXl,

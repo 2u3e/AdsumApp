@@ -137,6 +137,7 @@ class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBody: true,
       appBar: AppBar(
         title: Row(
           children: [
@@ -174,7 +175,7 @@ class _NotificationListScreenState extends ConsumerState<NotificationListScreen>
       body: _notifications.isEmpty
           ? _buildEmpty(context, isDark)
           : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.only(top: 8, bottom: 120),
               itemCount: _notifications.length,
               itemBuilder: (context, index) {
                 final notif = _notifications[index];

@@ -61,7 +61,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onRefresh: () async => await Future.delayed(const Duration(seconds: 1)),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 120),
+            padding: const EdgeInsets.only(bottom: 140),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

@@ -141,6 +141,32 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                         )),
                     ],
                   ),
+                  const SizedBox(width: 4),
+                  // Yeni is emri butonu
+                  GestureDetector(
+                    onTap: () => context.push('/work-orders/create'),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                 ],
               ),
             ),
@@ -152,7 +178,7 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                 child: orders.isEmpty
                     ? _buildEmpty(context, isDark)
                     : ListView.builder(
-                        padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 120),
+                        padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 140),
                         itemCount: orders.length,
                         itemBuilder: (context, index) {
                           final order = orders[index];
@@ -184,15 +210,6 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
               ),
             ),
           ],
-        ),
-      ),
-      // FAB - compact pill
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80),
-        child: FloatingActionButton.small(
-          onPressed: () => context.push('/work-orders/create'),
-          elevation: 4,
-          child: const Icon(Icons.add_rounded, size: 24),
         ),
       ),
     );
