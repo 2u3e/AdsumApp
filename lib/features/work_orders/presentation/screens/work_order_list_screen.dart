@@ -325,62 +325,129 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) => StatefulBuilder(builder: (context, setS) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return DraggableScrollableSheet(
-          initialChildSize: 0.65,
-          minChildSize: 0.4,
-          maxChildSize: 0.85,
+          initialChildSize: 0.7,
+          minChildSize: 0.45,
+          maxChildSize: 0.9,
           expand: false,
-          builder: (context, sc) => Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: ListView(
-              controller: sc,
-              children: [
-                Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 12, bottom: 20),
-                  decoration: BoxDecoration(color: AppColors.gray300, borderRadius: AppSpacing.borderRadiusFull))),
-                Text('Filtrele', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 20),
-                Text('Adres / Mahalle / Cadde', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 8),
-                TextField(controller: addrCtrl,
-                  decoration: const InputDecoration(hintText: 'Örn: Tecde, İnönü Caddesi...', prefixIcon: Icon(Icons.location_on_outlined))),
-                const SizedBox(height: 20),
-                Text('Durum', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: WorkStatus.values.map((s) => _ColoredFilterChip(
-                    label: s.label,
-                    color: s.color,
-                    selected: tmpS.contains(s),
-                    onTap: () => setS(() => tmpS.contains(s) ? tmpS.remove(s) : tmpS.add(s)),
-                  )).toList(),
+          builder: (context, sc) => Column(
+            children: [
+              // Fixed header
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 12),
+                  decoration: BoxDecoration(color: AppColors.gray300, borderRadius: AppSpacing.borderRadiusFull),
                 ),
-                const SizedBox(height: 20),
-                Text('Öncelik', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: WorkPriority.values.map((p) => _ColoredFilterChip(
-                    label: p.label,
-                    color: p.color,
-                    selected: tmpP.contains(p),
-                    onTap: () => setS(() => tmpP.contains(p) ? tmpP.remove(p) : tmpP.add(p)),
-                  )).toList(),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.tune_rounded, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Text('Filtrele', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  ],
                 ),
-                const SizedBox(height: 28),
-                Row(children: [
-                  Expanded(child: OutlinedButton(
-                    onPressed: () { setState(() { _selectedStatuses = {}; _selectedPriorities = {}; _addressFilter = ''; }); Navigator.pop(context); },
-                    child: const Text('Temizle'))),
-                  const SizedBox(width: 12),
-                  Expanded(child: ElevatedButton(
-                    onPressed: () { setState(() { _selectedStatuses = tmpS; _selectedPriorities = tmpP; _addressFilter = addrCtrl.text.trim(); }); Navigator.pop(context); },
-                    child: const Text('Uygula'))),
-                ]),
-              ],
-            ),
+              ),
+              // Scrollable filters
+              Expanded(
+                child: ListView(
+                  controller: sc,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                  children: [
+                    Text('Adres / Mahalle / Cadde', style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: addrCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'Örn: Tecde, İnönü Caddesi...',
+                        prefixIcon: Icon(Icons.location_on_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text('Durum', style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: WorkStatus.values.map((s) => _ColoredFilterChip(
+                        label: s.label,
+                        color: s.color,
+                        selected: tmpS.contains(s),
+                        onTap: () => setS(() => tmpS.contains(s) ? tmpS.remove(s) : tmpS.add(s)),
+                      )).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    Text('Öncelik', style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: WorkPriority.values.map((p) => _ColoredFilterChip(
+                        label: p.label,
+                        color: p.color,
+                        selected: tmpP.contains(p),
+                        onTap: () => setS(() => tmpP.contains(p) ? tmpP.remove(p) : tmpP.add(p)),
+                      )).toList(),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+              // Sticky footer with action buttons
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : Colors.white,
+                  border: Border(
+                    top: BorderSide(
+                      color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                      width: 0.8,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedStatuses = {};
+                            _selectedPriorities = {};
+                            _addressFilter = '';
+                          });
+                          Navigator.pop(context);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Temizle'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _selectedStatuses = tmpS;
+                            _selectedPriorities = tmpP;
+                            _addressFilter = addrCtrl.text.trim();
+                          });
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Uygula', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       }),
