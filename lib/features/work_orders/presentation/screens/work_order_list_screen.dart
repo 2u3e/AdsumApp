@@ -393,10 +393,14 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.65,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
@@ -417,7 +421,7 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Text(
                 'Devam edenler her zaman en üstte, tamamlananlar en altta görünür.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -426,52 +430,59 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            ...WorkSortBy.values.map((sort) {
-              final selected = _sortBy == sort;
-              return InkWell(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _sortBy = sort);
-                  Navigator.pop(context);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  color: selected ? AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08) : null,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36, height: 36,
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.primary.withValues(alpha: isDark ? 0.25 : 0.15)
-                              : isDark ? AppColors.gray800 : AppColors.gray100,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          sort.icon,
-                          size: 18,
-                          color: selected ? AppColors.primary : (isDark ? AppColors.gray400 : AppColors.gray500),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          sort.label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                            color: selected ? AppColors.primary : null,
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                padding: const EdgeInsets.only(bottom: 16),
+                itemCount: WorkSortBy.values.length,
+                itemBuilder: (context, index) {
+                  final sort = WorkSortBy.values[index];
+                  final selected = _sortBy == sort;
+                  return InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _sortBy = sort);
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      color: selected ? AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08) : null,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36, height: 36,
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AppColors.primary.withValues(alpha: isDark ? 0.25 : 0.15)
+                                  : isDark ? AppColors.gray800 : AppColors.gray100,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              sort.icon,
+                              size: 18,
+                              color: selected ? AppColors.primary : (isDark ? AppColors.gray400 : AppColors.gray500),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              sort.label,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                color: selected ? AppColors.primary : null,
+                              ),
+                            ),
+                          ),
+                          if (selected)
+                            const Icon(Icons.check_rounded, color: AppColors.primary, size: 20),
+                        ],
                       ),
-                      if (selected)
-                        const Icon(Icons.check_rounded, color: AppColors.primary, size: 20),
-                    ],
-                  ),
-                ),
-              );
-            }),
-            const SizedBox(height: 12),
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
