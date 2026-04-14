@@ -120,7 +120,7 @@ class _AdsumShell extends StatelessWidget {
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: EdgeInsets.only(top: 10, bottom: bottomPadding > 0 ? 6 : 10, left: 8, right: 8),
+            padding: EdgeInsets.only(top: 10, bottom: bottomPadding > 0 ? 6 : 10, left: 4, right: 4),
             child: Row(
               children: List.generate(_items.length, (index) {
                 final item = _items[index];
@@ -179,7 +179,7 @@ class _NavBarButton extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeOutCubic,
-            padding: EdgeInsets.symmetric(horizontal: isSelected ? 14 : 10, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: isSelected ? 12 : 10, vertical: 8),
             decoration: BoxDecoration(
               color: isSelected
                   ? AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1)
@@ -216,19 +216,26 @@ class _NavBarButton extends StatelessWidget {
                       ),
                   ],
                 ),
-                // Label animasyonu: sadece secilen gosterir, diger butonlarda yer kaplamaz
+                // Label animasyonu: sadece secilen gosterir, FittedBox ile
+                // tasan kucuk ekranlarda otomatik olcekler, overflow olmaz
                 AnimatedSize(
                   duration: const Duration(milliseconds: 280),
                   curve: Curves.easeOutCubic,
                   child: isSelected
                       ? Padding(
                           padding: const EdgeInsets.only(left: 6),
-                          child: Text(
-                            item.label,
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              item.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.clip,
+                              softWrap: false,
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         )
