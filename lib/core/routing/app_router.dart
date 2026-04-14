@@ -8,6 +8,7 @@ import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/notifications/presentation/screens/notification_list_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/work_orders/presentation/screens/work_order_create_screen.dart';
 import '../../features/work_orders/presentation/screens/work_order_detail_screen.dart';
 import '../../features/work_orders/presentation/screens/work_order_list_screen.dart';
 import 'route_names.dart';
@@ -78,6 +79,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 name: RouteNames.workOrders,
                 builder: (context, state) => const WorkOrderListScreen(),
                 routes: [
+                  GoRoute(
+                    path: 'create',
+                    name: RouteNames.workOrderCreate,
+                    builder: (context, state) => const WorkOrderCreateScreen(),
+                  ),
                   GoRoute(
                     path: ':id',
                     name: RouteNames.workOrderDetail,

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../work_orders/data/mock_work_orders.dart';
 
 /// Ana sayfa / Dashboard ekrani
 class HomeScreen extends ConsumerWidget {
@@ -14,6 +16,7 @@ class HomeScreen extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final user = authState.value?.user;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final stats = DashboardStats.fromWorkOrders(mockWorkOrders);
 
     return Scaffold(
       appBar: AppBar(
@@ -36,16 +39,34 @@ class HomeScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: Stack(
+              children: [
+                const Icon(Icons.notifications_outlined),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             onPressed: () {
-              // Bildirimler sayfasina git
+              // Bildirimler sekmesine git (index 2)
+              final shell = StatefulNavigationShell.of(context);
+              shell.goBranch(2);
             },
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          // TODO: Dashboard verilerini yenile
+          await Future.delayed(const Duration(seconds: 1));
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -54,42 +75,14 @@ class HomeScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               AppSpacing.verticalLg,
-
-              // Istatistik kartlari
-              _StatsGrid(),
-
+              _StatsSection(stats: stats),
               AppSpacing.verticalXl,
-
-              // Hizli aksiyonlar
               Text(
                 'Hızlı İşlemler',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               AppSpacing.verticalMd,
-              _QuickActions(),
-
-              AppSpacing.verticalXl,
-
-              // Son is emirleri
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Son İş Emirleri',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      // Tum is emirleri sayfasina git
-                    },
-                    child: const Text('Tümünü Gör'),
-                  ),
-                ],
-              ),
-              AppSpacing.verticalSm,
-
-              // Placeholder - API baglandiginda gercek veri gelecek
-              _EmptyWorkOrdersPlaceholder(),
+              const _QuickActions(),
             ],
           ),
         ),
@@ -106,41 +99,68 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-/// Istatistik grid'i
-class _StatsGrid extends StatelessWidget {
+/// Istatistik kartlari - 5 adet, ilk satir 3, ikinci satir 2
+class _StatsSection extends StatelessWidget {
+  final DashboardStats stats;
+  const _StatsSection({required this.stats});
+
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.6,
-      children: const [
-        _StatCard(
-          title: 'Açık İş Emri',
-          value: '--',
-          icon: Icons.assignment_outlined,
-          color: AppColors.primary,
+    return Column(
+      children: [
+        // Ilk satir: 3 kart
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                title: 'Açık',
+                value: '${stats.openCount}',
+                icon: Icons.assignment_outlined,
+                color: AppColors.primary,
+              ),
+            ),
+            AppSpacing.horizontalMd,
+            Expanded(
+              child: _StatCard(
+                title: 'Bugün Gelen',
+                value: '${stats.todayCount}',
+                icon: Icons.today_rounded,
+                color: AppColors.info,
+              ),
+            ),
+            AppSpacing.horizontalMd,
+            Expanded(
+              child: _StatCard(
+                title: 'Dünden',
+                value: '${stats.yesterdayCount}',
+                icon: Icons.history_rounded,
+                color: AppColors.gray500,
+              ),
+            ),
+          ],
         ),
-        _StatCard(
-          title: 'Bugün Bitmeli',
-          value: '--',
-          icon: Icons.schedule_rounded,
-          color: AppColors.warning,
-        ),
-        _StatCard(
-          title: 'Geciken',
-          value: '--',
-          icon: Icons.warning_amber_rounded,
-          color: AppColors.error,
-        ),
-        _StatCard(
-          title: 'Tamamlanan',
-          value: '--',
-          icon: Icons.check_circle_outline_rounded,
-          color: AppColors.success,
+        AppSpacing.verticalMd,
+        // Ikinci satir: 2 kart
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                title: 'Devam Eden',
+                value: '${stats.inProgressCount}',
+                icon: Icons.autorenew_rounded,
+                color: AppColors.warning,
+              ),
+            ),
+            AppSpacing.horizontalMd,
+            Expanded(
+              child: _StatCard(
+                title: 'Tamamlanan',
+                value: '${stats.completedCount}',
+                icon: Icons.check_circle_outline_rounded,
+                color: AppColors.success,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -167,34 +187,27 @@ class _StatCard extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, color: color, size: 22),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: isDark ? 0.2 : 0.1),
-                    borderRadius: AppSpacing.borderRadiusFull,
-                  ),
-                  child: Text(
-                    value,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
+                Icon(icon, color: color, size: 20),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
               ],
             ),
+            AppSpacing.verticalXs,
             Text(
               title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: isDark
                         ? AppColors.textSecondaryDark
                         : AppColors.textSecondaryLight,
@@ -209,6 +222,8 @@ class _StatCard extends StatelessWidget {
 
 /// Hizli aksiyonlar
 class _QuickActions extends StatelessWidget {
+  const _QuickActions();
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -219,18 +234,7 @@ class _QuickActions extends StatelessWidget {
             label: 'Yeni İş Emri',
             color: AppColors.primary,
             onTap: () {
-              // TODO: Is emri olusturma sayfasi
-            },
-          ),
-        ),
-        AppSpacing.horizontalMd,
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.person_outline_rounded,
-            label: 'Atananlarım',
-            color: AppColors.info,
-            onTap: () {
-              // TODO: Bana atanan is emirleri filtresi
+              context.push('/work-orders/create');
             },
           ),
         ),
@@ -275,9 +279,7 @@ class _QuickActionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: color.withValues(alpha: isDark ? 0.15 : 0.08),
           borderRadius: AppSpacing.borderRadiusMd,
-          border: Border.all(
-            color: color.withValues(alpha: 0.2),
-          ),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -290,48 +292,6 @@ class _QuickActionButton extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
               textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Bos is emri placeholder
-class _EmptyWorkOrdersPlaceholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Icon(
-              Icons.assignment_outlined,
-              size: 48,
-              color: isDark ? AppColors.gray600 : AppColors.gray300,
-            ),
-            AppSpacing.verticalMd,
-            Text(
-              'Henüz iş emri verisi yok',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
-                  ),
-            ),
-            AppSpacing.verticalXs,
-            Text(
-              'API bağlantısı kurulduğunda veriler burada görünecek',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
-                  ),
             ),
           ],
         ),

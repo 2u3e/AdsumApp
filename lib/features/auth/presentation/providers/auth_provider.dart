@@ -74,6 +74,28 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       AuthState(isLoading: true),
     );
 
+    // TODO: API baglantiginda kaldir - test giris modu
+    if (username == 'test' && password == '123456') {
+      await Future.delayed(const Duration(milliseconds: 800));
+      state = AsyncValue.data(
+        AuthState(
+          isAuthenticated: true,
+          user: const User(
+            id: 'test-user-001',
+            userName: 'test',
+            email: 'test@adsum.gov',
+            firstName: 'Test',
+            lastName: 'Kullanıcı',
+            roles: ['Admin'],
+            permissions: ['work.view', 'work.create', 'work.edit'],
+            organizationName: 'Bilgi İşlem Müdürlüğü',
+            departmentName: 'Yazılım Geliştirme',
+          ),
+        ),
+      );
+      return;
+    }
+
     try {
       final response = await _authDatasource.login(
         username: username,
