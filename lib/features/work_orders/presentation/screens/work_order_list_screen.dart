@@ -620,21 +620,6 @@ class _ColoredFilterChip extends StatelessWidget {
   }
 }
 
-/// Is turune gore ikon esleme
-IconData _workTypeIcon(String type) {
-  final t = type.toLowerCase();
-  if (t.contains('asfalt') || t.contains('yol')) return Icons.construction_rounded;
-  if (t.contains('su') || t.contains('kanalizasyon')) return Icons.water_drop_rounded;
-  if (t.contains('elektrik') || t.contains('aydınlatma')) return Icons.electric_bolt_rounded;
-  if (t.contains('ağaç') || t.contains('park') || t.contains('çevre') || t.contains('bahçe')) return Icons.park_rounded;
-  if (t.contains('çöp') || t.contains('temiz')) return Icons.delete_outline_rounded;
-  if (t.contains('trafik') || t.contains('işaret')) return Icons.traffic_rounded;
-  if (t.contains('kaldırım') || t.contains('tretuar')) return Icons.directions_walk_rounded;
-  if (t.contains('boya')) return Icons.format_paint_rounded;
-  if (t.contains('kazı')) return Icons.dashboard_customize_rounded;
-  return Icons.handyman_rounded;
-}
-
 /// Premium is karti - split layout, durum accent strip + zengin icerik
 class _WorkCard extends StatefulWidget {
   final WorkOrder order;
@@ -693,7 +678,7 @@ class _WorkCardState extends State<_WorkCard> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // SOL: Dar status strip + tek icon
+                    // SOL: Dar status strip + durum ikonu
                     Container(
                       width: 46,
                       decoration: BoxDecoration(
@@ -713,17 +698,19 @@ class _WorkCardState extends State<_WorkCard> {
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
+                          // Arka plan dekoratif ikon
                           Positioned(
                             right: -6,
                             bottom: -6,
                             child: Icon(
-                              _workTypeIcon(order.workTypeName),
+                              order.status.icon,
                               size: 44,
                               color: Colors.white.withValues(alpha: 0.12),
                             ),
                           ),
+                          // Merkez durum ikonu
                           Icon(
-                            _workTypeIcon(order.workTypeName),
+                            order.status.icon,
                             size: 24,
                             color: Colors.white,
                           ),
@@ -776,11 +763,12 @@ class _WorkCardState extends State<_WorkCard> {
                               ],
                             ),
 
-                            // SATIR 2: is turu + oncelik rozeti
+                            // SATIR 2: is turu + yanina bitisik oncelik metni
                             Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
                               children: [
-                                Expanded(
+                                Flexible(
                                   child: Text(
                                     order.workTypeName,
                                     style: TextStyle(
@@ -796,28 +784,14 @@ class _WorkCardState extends State<_WorkCard> {
                                   ),
                                 ),
                                 if (isHighPriority) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: order.priority.color.withValues(alpha: isDark ? 0.22 : 0.12),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(order.priority.icon, size: 11, color: order.priority.color),
-                                        const SizedBox(width: 3),
-                                        Text(
-                                          order.priority.label.toUpperCase(),
-                                          style: TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 0.5,
-                                            color: order.priority.color,
-                                          ),
-                                        ),
-                                      ],
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    order.priority.label,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: order.priority.color,
+                                      letterSpacing: -0.1,
                                     ),
                                   ),
                                 ],
