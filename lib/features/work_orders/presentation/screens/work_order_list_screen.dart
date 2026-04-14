@@ -178,7 +178,7 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                 child: orders.isEmpty
                     ? _buildEmpty(context, isDark)
                     : ListView.builder(
-                        padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 140),
+                        padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 20),
                         itemCount: orders.length,
                         itemBuilder: (context, index) {
                           final order = orders[index];

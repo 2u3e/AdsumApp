@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,7 +61,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Premium floating bottom navigation bar
+/// Attached premium bottom navigation bar
 class _AdsumShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
   const _AdsumShell({required this.navigationShell});
@@ -82,49 +80,42 @@ class _AdsumShell extends StatelessWidget {
 
     return Scaffold(
       body: navigationShell,
-      extendBody: true,
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.only(left: 16, right: 16, bottom: bottomPadding + 12),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              height: 68,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.gray800.withValues(alpha: 0.85)
-                    : Colors.white.withValues(alpha: 0.88),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: isDark
-                      ? AppColors.gray700.withValues(alpha: 0.5)
-                      : AppColors.gray200.withValues(alpha: 0.8),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(_items.length, (index) {
-                  final item = _items[index];
-                  final isSelected = navigationShell.currentIndex == index;
-                  return _NavBarButton(
-                    item: item,
-                    isSelected: isSelected,
-                    showBadge: index == 2, // bildirim badge
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex);
-                    },
-                  );
-                }),
-              ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.gray900 : Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: isDark ? AppColors.gray800 : AppColors.gray200,
+              width: 0.8,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(top: 10, bottom: bottomPadding > 0 ? 6 : 10, left: 8, right: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(_items.length, (index) {
+                final item = _items[index];
+                final isSelected = navigationShell.currentIndex == index;
+                return _NavBarButton(
+                  item: item,
+                  isSelected: isSelected,
+                  showBadge: index == 2,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex);
+                  },
+                );
+              }),
             ),
           ),
         ),
