@@ -620,8 +620,23 @@ class _ColoredFilterChip extends StatelessWidget {
   }
 }
 
-/// Yeni is karti - kompakt, temiz, vurucu
-class _WorkCard extends StatelessWidget {
+/// Is turune gore ikon esleme
+IconData _workTypeIcon(String type) {
+  final t = type.toLowerCase();
+  if (t.contains('asfalt') || t.contains('yol')) return Icons.construction_rounded;
+  if (t.contains('su') || t.contains('kanalizasyon')) return Icons.water_drop_rounded;
+  if (t.contains('elektrik') || t.contains('aydınlatma')) return Icons.electric_bolt_rounded;
+  if (t.contains('ağaç') || t.contains('park') || t.contains('çevre') || t.contains('bahçe')) return Icons.park_rounded;
+  if (t.contains('çöp') || t.contains('temiz')) return Icons.delete_outline_rounded;
+  if (t.contains('trafik') || t.contains('işaret')) return Icons.traffic_rounded;
+  if (t.contains('kaldırım') || t.contains('tretuar')) return Icons.directions_walk_rounded;
+  if (t.contains('boya')) return Icons.format_paint_rounded;
+  if (t.contains('kazı')) return Icons.dashboard_customize_rounded;
+  return Icons.handyman_rounded;
+}
+
+/// Premium is karti - split layout, durum accent strip + zengin icerik
+class _WorkCard extends StatefulWidget {
   final WorkOrder order;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
@@ -629,98 +644,363 @@ class _WorkCard extends StatelessWidget {
   const _WorkCard({required this.order, required this.onTap, required this.onLongPress});
 
   @override
+  State<_WorkCard> createState() => _WorkCardState();
+}
+
+class _WorkCardState extends State<_WorkCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final order = widget.order;
+    final statusColor = order.status.color;
+    final isHighPriority = order.priority == WorkPriority.critical ||
+        order.priority == WorkPriority.urgent;
+    final isCompleted = order.status == WorkStatus.completed ||
+        order.status == WorkStatus.cancelled;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 10),
       child: GestureDetector(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.gray800 : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border(
-              left: BorderSide(color: order.status.color, width: 4),
-            ),
-            boxShadow: [
-              if (!isDark) BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Satir 1: no + oncelik ikonu + durum
-              Row(
-                children: [
-                  // Oncelik ikonu
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: order.priority.color.withValues(alpha: isDark ? 0.2 : 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(order.priority.icon, size: 14, color: order.priority.color),
-                  ),
-                  const SizedBox(width: 10),
-                  // Is no + tur
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(order.workNumber, style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              fontFamily: 'monospace', letterSpacing: 0.5,
-                              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)),
-                        Text(order.workTypeName, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                  ),
-                  // Durum chip
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: order.status.color.withValues(alpha: isDark ? 0.2 : 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(order.status.icon, size: 12, color: order.status.color),
-                        const SizedBox(width: 4),
-                        Text(order.status.label, style: TextStyle(
-                          color: order.status.color, fontSize: 11, fontWeight: FontWeight.w700)),
-                      ],
-                    ),
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.98 : 1.0,
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOut,
+          child: AnimatedOpacity(
+            opacity: isCompleted ? 0.78 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            child: Container(
+              height: 104,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.gray800 : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: isHighPriority
+                        ? statusColor.withValues(alpha: isDark ? 0.25 : 0.12)
+                        : Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                    blurRadius: isHighPriority ? 16 : 8,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              child: Row(
+                children: [
+                  // SOL: Status accent strip + work type icon
+                  Container(
+                    width: 58,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        bottomLeft: Radius.circular(16),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          statusColor.withValues(alpha: isDark ? 0.95 : 1.0),
+                          statusColor.withValues(alpha: isDark ? 0.75 : 0.82),
+                        ],
+                      ),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Buyuk arka plan ikonu (dekoratif)
+                        Positioned(
+                          right: -8,
+                          bottom: -8,
+                          child: Icon(
+                            _workTypeIcon(order.workTypeName),
+                            size: 56,
+                            color: Colors.white.withValues(alpha: 0.12),
+                          ),
+                        ),
+                        // Merkez ikon
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _workTypeIcon(order.workTypeName),
+                              size: 26,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 4),
+                            // Oncelik dot serisi (1-5)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(5, (i) {
+                                final filled = i < order.priority.value;
+                                return Container(
+                                  width: 4, height: 4,
+                                  margin: const EdgeInsets.symmetric(horizontal: 1),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: filled ? 0.95 : 0.25),
+                                    shape: BoxShape.circle,
+                                  ),
+                                );
+                              }),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
 
-              // Satir 2: adres
-              Row(
-                children: [
-                  Icon(Icons.location_on_outlined, size: 14,
-                      color: isDark ? AppColors.gray500 : AppColors.gray400),
-                  const SizedBox(width: 4),
+                  // SAG: icerik
                   Expanded(
-                    child: Text(order.shortAddress, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Top: is tipi + durum dot
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      order.workTypeName,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.1,
+                                        decoration: isCompleted ? TextDecoration.lineThrough : null,
+                                        decorationColor: isDark ? AppColors.gray500 : AppColors.gray400,
+                                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          order.workNumber,
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontFamily: 'monospace',
+                                            letterSpacing: 0.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? AppColors.gray500 : AppColors.gray400,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          width: 3, height: 3,
+                                          decoration: BoxDecoration(
+                                            color: isDark ? AppColors.gray600 : AppColors.gray300,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          order.status.label,
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: statusColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Yuksek oncelik isareti
+                              if (isHighPriority)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: order.priority.color.withValues(alpha: isDark ? 0.22 : 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(order.priority.icon, size: 11, color: order.priority.color),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        order.priority.label.toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.5,
+                                          color: order.priority.color,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+
+                          // Bottom: address + meta
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.place_outlined,
+                                    size: 12,
+                                    color: isDark ? AppColors.gray500 : AppColors.gray400,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Expanded(
+                                    child: Text(
+                                      order.shortAddress,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 5),
+                              Row(
+                                children: [
+                                  // Atanan kisi
+                                  if (order.assigneeName != null) ...[
+                                    _MiniAvatar(name: order.assigneeName!),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      order.assigneeName!.split(' ').first,
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? AppColors.textSecondaryDark : AppColors.gray700,
+                                      ),
+                                    ),
+                                  ] else ...[
+                                    Icon(Icons.person_off_outlined, size: 13,
+                                        color: isDark ? AppColors.gray500 : AppColors.gray400),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Atanmadı',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w500,
+                                        fontStyle: FontStyle.italic,
+                                        color: isDark ? AppColors.gray500 : AppColors.gray400,
+                                      ),
+                                    ),
+                                  ],
+                                  const Spacer(),
+                                  if (order.commentCount > 0) ...[
+                                    Icon(Icons.chat_bubble_outline_rounded, size: 11,
+                                        color: isDark ? AppColors.gray500 : AppColors.gray400),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      '${order.commentCount}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  if (order.attachmentCount > 0) ...[
+                                    Icon(Icons.attach_file_rounded, size: 11,
+                                        color: isDark ? AppColors.gray500 : AppColors.gray400),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      '${order.attachmentCount}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Icon(Icons.schedule_rounded, size: 11,
+                                      color: isDark ? AppColors.gray500 : AppColors.gray400),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    order.timeAgo,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  // Zaman
-                  Text(order.timeAgo, style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                        fontSize: 10)),
                 ],
               ),
-            ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Kisi adindan ilk harfleri alan mini avatar
+class _MiniAvatar extends StatelessWidget {
+  final String name;
+  const _MiniAvatar({required this.name});
+
+  String get _initials {
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+  }
+
+  Color get _bgColor {
+    // Ad hash'inden tutarli renk
+    final colors = [
+      const Color(0xFF3B82F6), const Color(0xFF10B981), const Color(0xFF8B5CF6),
+      const Color(0xFFF59E0B), const Color(0xFFEF4444), const Color(0xFF06B6D4),
+      const Color(0xFFEC4899), const Color(0xFF14B8A6),
+    ];
+    return colors[name.hashCode.abs() % colors.length];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_bgColor, _bgColor.withValues(alpha: 0.7)],
+        ),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          _initials,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 8.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.2,
           ),
         ),
       ),

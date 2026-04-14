@@ -174,7 +174,7 @@ class _NavBarButton extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        height: 48,
+        height: 52,
         child: Center(
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 280),
