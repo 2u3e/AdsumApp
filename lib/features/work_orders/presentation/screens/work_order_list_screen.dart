@@ -16,6 +16,34 @@ class WorkOrderListScreen extends ConsumerStatefulWidget {
   ConsumerState<WorkOrderListScreen> createState() => _WorkOrderListScreenState();
 }
 
+/// Siralama secenekleri
+enum WorkSortBy {
+  smart('Akıllı (Varsayılan)', Icons.auto_awesome_rounded),
+  createdNewest('En Yeni İşler', Icons.schedule_rounded),
+  createdOldest('En Eski İşler', Icons.history_rounded),
+  workNumber('İş Numarası', Icons.numbers_rounded),
+  workType('İş Türü', Icons.category_rounded),
+  address('Adres', Icons.location_on_outlined),
+  priority('Öncelik', Icons.flag_rounded);
+
+  final String label;
+  final IconData icon;
+  const WorkSortBy(this.label, this.icon);
+}
+
+/// Durum siralama agirliklari - devam eden ustte, tamamlanan altta
+int _statusOrder(WorkStatus s) {
+  return switch (s) {
+    WorkStatus.inProgress => 1,
+    WorkStatus.inTransit => 2,
+    WorkStatus.onHold => 3,
+    WorkStatus.pending => 4,
+    WorkStatus.draft => 5,
+    WorkStatus.completed => 6,
+    WorkStatus.cancelled => 7,
+  };
+}
+
 class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
   bool _isSearching = false;
   final _searchController = TextEditingController();
@@ -23,6 +51,7 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
   Set<WorkStatus> _selectedStatuses = {};
   Set<WorkPriority> _selectedPriorities = {};
   String _addressFilter = '';
+  WorkSortBy _sortBy = WorkSortBy.smart;
 
   List<WorkOrder> get _filteredOrders {
     var orders = mockWorkOrders.toList();
@@ -51,12 +80,37 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
     if (_selectedPriorities.isNotEmpty) {
       orders = orders.where((w) => _selectedPriorities.contains(w.priority)).toList();
     }
+
+    // DURUM ONCELIGI HER ZAMAN UYGULANIR
+    // Devam edenler ustte, tamamlananlar altta, diger siralama ayni durum icinde
     orders.sort((a, b) {
-      final pc = b.priority.value.compareTo(a.priority.value);
-      if (pc != 0) return pc;
-      return b.createdAt.compareTo(a.createdAt);
+      final statusDiff = _statusOrder(a.status).compareTo(_statusOrder(b.status));
+      if (statusDiff != 0) return statusDiff;
+      return _secondarySort(a, b);
     });
     return orders;
+  }
+
+  int _secondarySort(WorkOrder a, WorkOrder b) {
+    switch (_sortBy) {
+      case WorkSortBy.smart:
+        // Oncelik yuksek ustte, sonra yeni tarih
+        final p = b.priority.value.compareTo(a.priority.value);
+        if (p != 0) return p;
+        return b.createdAt.compareTo(a.createdAt);
+      case WorkSortBy.createdNewest:
+        return b.createdAt.compareTo(a.createdAt);
+      case WorkSortBy.createdOldest:
+        return a.createdAt.compareTo(b.createdAt);
+      case WorkSortBy.workNumber:
+        return b.workNumber.compareTo(a.workNumber);
+      case WorkSortBy.workType:
+        return a.workTypeName.compareTo(b.workTypeName);
+      case WorkSortBy.address:
+        return a.fullAddress.compareTo(b.fullAddress);
+      case WorkSortBy.priority:
+        return b.priority.value.compareTo(a.priority.value);
+    }
   }
 
   int get _activeFilterCount {
@@ -130,9 +184,29 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                       if (!_isSearching) { _searchController.clear(); _searchQuery = ''; }
                     }),
                   ),
+                  // Siralama butonu
                   Stack(
                     children: [
-                      IconButton(icon: const Icon(Icons.tune_rounded, size: 22), onPressed: () => _showFilterSheet(context)),
+                      IconButton(
+                        icon: const Icon(Icons.swap_vert_rounded, size: 22),
+                        onPressed: () => _showSortSheet(context),
+                        tooltip: 'Sırala',
+                      ),
+                      if (_sortBy != WorkSortBy.smart)
+                        Positioned(right: 10, top: 10, child: Container(
+                          width: 7, height: 7,
+                          decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                        )),
+                    ],
+                  ),
+                  // Filtre butonu
+                  Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.tune_rounded, size: 22),
+                        onPressed: () => _showFilterSheet(context),
+                        tooltip: 'Filtrele',
+                      ),
                       if (_activeFilterCount > 0)
                         Positioned(right: 6, top: 6, child: Container(
                           width: 16, height: 16,
@@ -272,23 +346,29 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                 const SizedBox(height: 20),
                 Text('Durum', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 8),
-                Wrap(spacing: 8, runSpacing: 8, children: WorkStatus.values.map((s) => FilterChip(
-                  label: Text(s.label),
-                  selected: tmpS.contains(s),
-                  selectedColor: s.color.withValues(alpha: 0.2),
-                  checkmarkColor: s.color,
-                  onSelected: (v) => setS(() => v ? tmpS.add(s) : tmpS.remove(s)),
-                )).toList()),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: WorkStatus.values.map((s) => _ColoredFilterChip(
+                    label: s.label,
+                    color: s.color,
+                    selected: tmpS.contains(s),
+                    onTap: () => setS(() => tmpS.contains(s) ? tmpS.remove(s) : tmpS.add(s)),
+                  )).toList(),
+                ),
                 const SizedBox(height: 20),
                 Text('Öncelik', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 8),
-                Wrap(spacing: 8, runSpacing: 8, children: WorkPriority.values.map((p) => FilterChip(
-                  label: Text(p.label),
-                  selected: tmpP.contains(p),
-                  selectedColor: p.color.withValues(alpha: 0.2),
-                  checkmarkColor: p.color,
-                  onSelected: (v) => setS(() => v ? tmpP.add(p) : tmpP.remove(p)),
-                )).toList()),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: WorkPriority.values.map((p) => _ColoredFilterChip(
+                    label: p.label,
+                    color: p.color,
+                    selected: tmpP.contains(p),
+                    onTap: () => setS(() => tmpP.contains(p) ? tmpP.remove(p) : tmpP.add(p)),
+                  )).toList(),
+                ),
                 const SizedBox(height: 28),
                 Row(children: [
                   Expanded(child: OutlinedButton(
@@ -304,6 +384,160 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
           ),
         );
       }),
+    );
+  }
+
+  /// Siralama secim sheet'i
+  void _showSortSheet(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(top: 12, bottom: 16),
+                decoration: BoxDecoration(color: AppColors.gray300, borderRadius: AppSpacing.borderRadiusFull),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.swap_vert_rounded, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text('Sırala', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                'Devam edenler her zaman en üstte, tamamlananlar en altta görünür.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...WorkSortBy.values.map((sort) {
+              final selected = _sortBy == sort;
+              return InkWell(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _sortBy = sort);
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  color: selected ? AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08) : null,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? AppColors.primary.withValues(alpha: isDark ? 0.25 : 0.15)
+                              : isDark ? AppColors.gray800 : AppColors.gray100,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          sort.icon,
+                          size: 18,
+                          color: selected ? AppColors.primary : (isDark ? AppColors.gray400 : AppColors.gray500),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          sort.label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                            color: selected ? AppColors.primary : null,
+                          ),
+                        ),
+                      ),
+                      if (selected)
+                        const Icon(Icons.check_rounded, color: AppColors.primary, size: 20),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Ozel renkli filtre chip'i - secili/secilmemis durumlar net
+class _ColoredFilterChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ColoredFilterChip({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? color.withValues(alpha: isDark ? 0.22 : 0.12)
+              : isDark ? AppColors.gray800 : AppColors.gray100,
+          borderRadius: AppSpacing.borderRadiusFull,
+          border: Border.all(
+            color: selected ? color.withValues(alpha: 0.5) : Colors.transparent,
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (selected) ...[
+              Icon(Icons.check_rounded, size: 14, color: color),
+              const SizedBox(width: 5),
+            ] else ...[
+              Container(
+                width: 7, height: 7,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 7),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: selected
+                    ? color
+                    : isDark ? AppColors.textSecondaryDark : AppColors.textPrimaryLight,
+                fontSize: 12.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

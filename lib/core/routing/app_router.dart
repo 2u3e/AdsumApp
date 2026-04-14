@@ -79,7 +79,27 @@ class _AdsumShell extends StatelessWidget {
     final bottomPadding = MediaQuery.viewPaddingOf(context).bottom;
 
     return Scaffold(
-      body: navigationShell,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.015),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey(navigationShell.currentIndex),
+          child: navigationShell,
+        ),
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDark ? AppColors.gray900 : Colors.white,
@@ -102,18 +122,19 @@ class _AdsumShell extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.only(top: 10, bottom: bottomPadding > 0 ? 6 : 10, left: 8, right: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: List.generate(_items.length, (index) {
                 final item = _items[index];
                 final isSelected = navigationShell.currentIndex == index;
-                return _NavBarButton(
-                  item: item,
-                  isSelected: isSelected,
-                  showBadge: index == 2,
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex);
-                  },
+                return Expanded(
+                  child: _NavBarButton(
+                    item: item,
+                    isSelected: isSelected,
+                    showBadge: index == 2,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex);
+                    },
+                  ),
                 );
               }),
             ),
@@ -147,67 +168,75 @@ class _NavBarButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselectedColor = isDark ? AppColors.gray400 : AppColors.gray500;
 
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-        padding: EdgeInsets.symmetric(horizontal: isSelected ? 16 : 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
+      child: SizedBox(
+        height: 48,
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.symmetric(horizontal: isSelected ? 14 : 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    isSelected ? item.activeIcon : item.icon,
-                    key: ValueKey(isSelected),
-                    size: 24,
-                    color: isSelected
-                        ? AppColors.primary
-                        : isDark ? AppColors.gray400 : AppColors.gray500,
-                  ),
-                ),
-                if (showBadge)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDark ? AppColors.gray800 : Colors.white,
-                          width: 1.5,
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      isSelected ? item.activeIcon : item.icon,
+                      size: 22,
+                      color: isSelected ? AppColors.primary : unselectedColor,
+                    ),
+                    if (showBadge)
+                      Positioned(
+                        right: -2,
+                        top: -2,
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDark ? AppColors.gray900 : Colors.white,
+                              width: 1.5,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                  ],
+                ),
+                // Label animasyonu: sadece secilen gosterir, diger butonlarda yer kaplamaz
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  child: isSelected
+                      ? Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Text(
+                            item.label,
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
               ],
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                item.label,
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
