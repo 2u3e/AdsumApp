@@ -1,0 +1,15 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:adsum_app/app.dart';
+
+void main() {
+  testWidgets('App renders without crashing', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: AdsumApp()),
+    );
+
+    // Uygulama basariyla yuklendi
+    expect(find.text('ADSUM'), findsAny);
+  });
+}

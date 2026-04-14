@@ -1,0 +1,88 @@
+name: adsum_app
+description: "Adsum - Belediye Yönetim Sistemi Mobil Uygulaması"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI & Design
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  flutter_svg: ^2.0.17
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+  flutter_animate: ^4.5.2
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Network
+  dio: ^5.8.0+1
+
+  # Storage
+  flutter_secure_storage: ^9.2.4
+  shared_preferences: ^2.5.3
+
+  # Auth
+  local_auth: ^2.3.0
+
+  # Notifications
+  flutter_local_notifications: ^18.0.1
+
+  # Utils
+  intl: ^0.20.2
+  connectivity_plus: ^6.1.4
+  logger: ^2.5.0
+  infinite_scroll_pagination: ^4.1.0
+  json_annotation: ^4.9.0
+  freezed_annotation: ^3.0.0
+  envied: ^1.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.15
+  freezed: ^3.0.6
+  json_serializable: ^6.9.5
+  riverpod_generator: ^2.6.3
+  envied_generator: ^1.1.1
+  custom_lint: ^0.7.5
+  riverpod_lint: ^2.6.3
+  mocktail: ^1.0.4
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.6
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  adaptive_icon_background: "#3B82F6"
+  adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  color_dark: "#111827"
+  image: "assets/icons/splash_logo.png"
+  android_12:
+    color: "#FFFFFF"
+    color_dark: "#111827"
+    icon_background_color: "#3B82F6"
+    image: "assets/icons/splash_logo.png"
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icons/
+    - assets/images/
+    - assets/animations/
