@@ -166,7 +166,7 @@ class _HeroStatsCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Ust satir: Toplam + Tamamlanan
+          // Ust satir: Toplam Acik + Tamamlanan
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
             child: Row(
@@ -174,84 +174,20 @@ class _HeroStatsCard extends StatelessWidget {
               children: [
                 // Sol: Toplam Acik Is Emri
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.assignment_rounded, color: Colors.white.withValues(alpha: 0.9), size: 16),
-                          const SizedBox(width: 6),
-                          const Text(
-                            'Toplam Açık İş Emri',
-                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.3),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${stats.totalCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 48,
-                              fontWeight: FontWeight.w800,
-                              height: 1,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Text(
-                              'adet',
-                              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                  child: _HeadlineStat(
+                    label: 'Toplam Açık İş Emri',
+                    value: stats.totalCount,
+                    valueColor: Colors.white,
+                    valueSize: 48,
                   ),
                 ),
-                // Sag: Tamamlanan - yesil vurgu
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF059669), Color(0xFF10B981)],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Tamamlanan',
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.95), fontSize: 11, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${stats.completedCount}',
-                        style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800, height: 1.1),
-                      ),
-                    ],
-                  ),
+                // Sag: Tamamlanan - yesil sayi
+                _HeadlineStat(
+                  label: 'Tamamlanan',
+                  value: stats.completedCount,
+                  valueColor: const Color(0xFF6EE7B7), // acik yesil
+                  valueSize: 38,
+                  alignEnd: true,
                 ),
               ],
             ),
@@ -264,31 +200,27 @@ class _HeroStatsCard extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.18),
           ),
 
-          // Alt satir: 1x3 stat tile
+          // Alt satir: 1x3 stat
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
             child: Row(
               children: [
                 _StatTile(
-                  icon: Icons.history_rounded,
                   label: 'Dünden',
                   value: stats.yesterdayCount,
-                  accentColor: const Color(0xFFFDBA74), // soft turuncu
+                  valueColor: Colors.white,
                 ),
                 _verticalDivider(),
                 _StatTile(
-                  icon: Icons.today_rounded,
                   label: 'Bugün',
                   value: stats.todayCount,
-                  accentColor: const Color(0xFF93C5FD), // ac.mavi - daha parlak
-                  isHighlighted: true,
+                  valueColor: Colors.white,
                 ),
                 _verticalDivider(),
                 _StatTile(
-                  icon: Icons.autorenew_rounded,
                   label: 'Devam Eden',
                   value: stats.inProgressCount,
-                  accentColor: const Color(0xFFFCD34D), // soft amber
+                  valueColor: const Color(0xFFFCD34D), // soft amber/sari
                 ),
               ],
             ),
@@ -301,71 +233,122 @@ class _HeroStatsCard extends StatelessWidget {
   Widget _verticalDivider() {
     return Container(
       width: 1,
-      height: 42,
+      height: 38,
       color: Colors.white.withValues(alpha: 0.15),
     );
   }
 }
 
-/// Alt satirdaki stat tile - vertical layout, accent color'li ikon
-class _StatTile extends StatelessWidget {
-  final IconData icon;
+/// Ust satirdaki buyuk stat (Toplam + Tamamlanan)
+class _HeadlineStat extends StatelessWidget {
   final String label;
   final int value;
-  final Color accentColor;
-  final bool isHighlighted;
+  final Color valueColor;
+  final double valueSize;
+  final bool alignEnd;
 
-  const _StatTile({
-    required this.icon,
+  const _HeadlineStat({
     required this.label,
     required this.value,
-    required this.accentColor,
-    this.isHighlighted = false,
+    required this.valueColor,
+    required this.valueSize,
+    this.alignEnd = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.85),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '$value',
+              style: TextStyle(
+                color: valueColor,
+                fontSize: valueSize,
+                fontWeight: FontWeight.w800,
+                height: 1,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                'adet',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Alt satirdaki stat - sadece rakam + label, ikonsuz
+class _StatTile extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color valueColor;
+
+  const _StatTile({
+    required this.label,
+    required this.value,
+    required this.valueColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 1),
-                  ),
-                  child: Icon(icon, color: accentColor, size: 13),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$value',
+                style: TextStyle(
+                  color: valueColor,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '$value',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isHighlighted ? 26 : 23,
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: isHighlighted ? 0.9 : 0.7),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
               ),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  'adet',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.75),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
