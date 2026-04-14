@@ -517,37 +517,28 @@ final List<WorkOrder> mockWorkOrders = [
 
 /// Dashboard istatistikleri
 class DashboardStats {
-  final int openCount;
-  final int todayCount;
-  final int yesterdayCount;
-  final int inProgressCount;
-  final int completedCount;
+  final int yesterdayCount; // Dunden kalan
+  final int todayCount;     // Bugun gelen
+  final int inProgressCount; // Devam eden
+  final int completedCount;  // Tamamlanan
 
   const DashboardStats({
-    required this.openCount,
-    required this.todayCount,
     required this.yesterdayCount,
+    required this.todayCount,
     required this.inProgressCount,
     required this.completedCount,
   });
 
-  /// Mock veriden hesapla
-  factory DashboardStats.fromWorkOrders(List<WorkOrder> orders) {
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final yesterdayStart = todayStart.subtract(const Duration(days: 1));
+  /// Toplam = Dunden + Bugun - Tamamlanan
+  int get totalCount => yesterdayCount + todayCount - completedCount;
 
-    return DashboardStats(
-      openCount: orders.where((w) =>
-          w.status != WorkStatus.completed && w.status != WorkStatus.cancelled).length,
-      todayCount: orders.where((w) => w.createdAt.isAfter(todayStart)).length,
-      yesterdayCount: orders.where((w) =>
-          w.createdAt.isAfter(yesterdayStart) && w.createdAt.isBefore(todayStart)).length,
-      inProgressCount: orders.where((w) =>
-          w.status == WorkStatus.inProgress ||
-          w.status == WorkStatus.inTransit ||
-          w.status == WorkStatus.onHold).length,
-      completedCount: orders.where((w) => w.status == WorkStatus.completed).length,
+  /// Sabit demo degerleri
+  factory DashboardStats.fromWorkOrders(List<WorkOrder> orders) {
+    return const DashboardStats(
+      yesterdayCount: 5,
+      todayCount: 8,
+      inProgressCount: 3,
+      completedCount: 4,
     );
   }
 }
