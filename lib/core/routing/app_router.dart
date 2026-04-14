@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,159 +14,210 @@ import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/work_orders/presentation/screens/work_order_create_screen.dart';
 import '../../features/work_orders/presentation/screens/work_order_detail_screen.dart';
 import '../../features/work_orders/presentation/screens/work_order_list_screen.dart';
+import '../theme/app_colors.dart';
 import 'route_names.dart';
 
-/// Ana router provider'i
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
 
   return GoRouter(
     initialLocation: RoutePaths.splash,
-    debugLogDiagnostics: true,
-
-    // Auth redirect - giris kontrolu
+    debugLogDiagnostics: false,
     redirect: (context, state) {
       final isLoggedIn = authState.value?.isAuthenticated ?? false;
       final isOnSplash = state.matchedLocation == RoutePaths.splash;
       final isOnLogin = state.matchedLocation == RoutePaths.login;
-
-      // Splash ekranindaysa birak (kendi kontrolu yapar)
       if (isOnSplash) return null;
-
-      // Giris yapilmamissa login'e yonlendir
       if (!isLoggedIn && !isOnLogin) return RoutePaths.login;
-
-      // Giris yapilmissa ve login sayfasindaysa ana sayfaya yonlendir
       if (isLoggedIn && isOnLogin) return RoutePaths.home;
-
       return null;
     },
-
     routes: [
-      // Splash
-      GoRoute(
-        path: RoutePaths.splash,
-        name: RouteNames.splash,
-        builder: (context, state) => const SplashScreen(),
-      ),
-
-      // Login
-      GoRoute(
-        path: RoutePaths.login,
-        name: RouteNames.login,
-        builder: (context, state) => const LoginScreen(),
-      ),
-
-      // Ana kabuk - Bottom Navigation
+      GoRoute(path: RoutePaths.splash, name: RouteNames.splash, builder: (context, state) => const SplashScreen()),
+      GoRoute(path: RoutePaths.login, name: RouteNames.login, builder: (context, state) => const LoginScreen()),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) {
-          return ShellScaffold(navigationShell: navigationShell);
-        },
+        builder: (context, state, navigationShell) => _AdsumShell(navigationShell: navigationShell),
         branches: [
-          // Home tab
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: RoutePaths.home,
-                name: RouteNames.home,
-                builder: (context, state) => const HomeScreen(),
-              ),
-            ],
-          ),
-
-          // Work Orders tab
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: RoutePaths.workOrders,
-                name: RouteNames.workOrders,
-                builder: (context, state) => const WorkOrderListScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'create',
-                    name: RouteNames.workOrderCreate,
-                    builder: (context, state) => const WorkOrderCreateScreen(),
-                  ),
-                  GoRoute(
-                    path: ':id',
-                    name: RouteNames.workOrderDetail,
-                    builder: (context, state) {
-                      final id = state.pathParameters['id']!;
-                      return WorkOrderDetailScreen(workOrderId: id);
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // Notifications tab
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: RoutePaths.notifications,
-                name: RouteNames.notifications,
-                builder: (context, state) => const NotificationListScreen(),
-              ),
-            ],
-          ),
-
-          // Profile tab
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: RoutePaths.profile,
-                name: RouteNames.profile,
-                builder: (context, state) => const ProfileScreen(),
-              ),
-            ],
-          ),
+          StatefulShellBranch(routes: [
+            GoRoute(path: RoutePaths.home, name: RouteNames.home, builder: (context, state) => const HomeScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: RoutePaths.workOrders, name: RouteNames.workOrders,
+              builder: (context, state) => const WorkOrderListScreen(),
+              routes: [
+                GoRoute(path: 'create', name: RouteNames.workOrderCreate, builder: (context, state) => const WorkOrderCreateScreen()),
+                GoRoute(path: ':id', name: RouteNames.workOrderDetail, builder: (context, state) => WorkOrderDetailScreen(workOrderId: state.pathParameters['id']!)),
+              ],
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: RoutePaths.notifications, name: RouteNames.notifications, builder: (context, state) => const NotificationListScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: RoutePaths.profile, name: RouteNames.profile, builder: (context, state) => const ProfileScreen()),
+          ]),
         ],
       ),
     ],
   );
 });
 
-/// Ana kabuk - Bottom Navigation Bar iceren scaffold
-class ShellScaffold extends StatelessWidget {
+/// Premium floating bottom navigation bar
+class _AdsumShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
+  const _AdsumShell({required this.navigationShell});
 
-  const ShellScaffold({super.key, required this.navigationShell});
+  static const _items = [
+    _NavItem(icon: Icons.space_dashboard_outlined, activeIcon: Icons.space_dashboard_rounded, label: 'Panel'),
+    _NavItem(icon: Icons.assignment_outlined, activeIcon: Icons.assignment_rounded, label: 'İşler'),
+    _NavItem(icon: Icons.notifications_outlined, activeIcon: Icons.notifications_rounded, label: 'Bildirim'),
+    _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profil'),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomPadding = MediaQuery.viewPaddingOf(context).bottom;
+
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) {
-          navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          );
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Ana Sayfa',
+      extendBody: true,
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(left: 16, right: 16, bottom: bottomPadding + 12),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              height: 68,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.gray800.withValues(alpha: 0.85)
+                    : Colors.white.withValues(alpha: 0.88),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isDark
+                      ? AppColors.gray700.withValues(alpha: 0.5)
+                      : AppColors.gray200.withValues(alpha: 0.8),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(_items.length, (index) {
+                  final item = _items[index];
+                  final isSelected = navigationShell.currentIndex == index;
+                  return _NavBarButton(
+                    item: item,
+                    isSelected: isSelected,
+                    showBadge: index == 2, // bildirim badge
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex);
+                    },
+                  );
+                }),
+              ),
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment_rounded),
-            label: 'İş Emirleri',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications_rounded),
-            label: 'Bildirimler',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outlined),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profil',
-          ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  const _NavItem({required this.icon, required this.activeIcon, required this.label});
+}
+
+class _NavBarButton extends StatelessWidget {
+  final _NavItem item;
+  final bool isSelected;
+  final bool showBadge;
+  final VoidCallback onTap;
+
+  const _NavBarButton({
+    required this.item,
+    required this.isSelected,
+    this.showBadge = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(horizontal: isSelected ? 16 : 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    isSelected ? item.activeIcon : item.icon,
+                    key: ValueKey(isSelected),
+                    size: 24,
+                    color: isSelected
+                        ? AppColors.primary
+                        : isDark ? AppColors.gray400 : AppColors.gray500,
+                  ),
+                ),
+                if (showBadge)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark ? AppColors.gray800 : Colors.white,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                item.label,
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

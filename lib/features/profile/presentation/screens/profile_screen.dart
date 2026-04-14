@@ -128,26 +128,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         return Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 3),
-                            child: ChoiceChip(
-                              label: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(status.icon, size: 14, color: selected ? Colors.white : status.color),
-                                  const SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      status.label,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 11, color: selected ? Colors.white : null),
-                                    ),
+                            child: GestureDetector(
+                              onTap: () => setState(() => _workStatus = status),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? status.color.withValues(alpha: isDark ? 0.25 : 0.15)
+                                      : isDark ? AppColors.gray700 : AppColors.gray100,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: selected ? status.color : Colors.transparent,
+                                    width: 1.5,
                                   ),
-                                ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(status.icon, size: 18, color: selected ? status.color : AppColors.gray400),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      status.label,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                        color: selected ? status.color : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              selected: selected,
-                              selectedColor: status.color,
-                              onSelected: (_) => setState(() => _workStatus = status),
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              visualDensity: VisualDensity.compact,
                             ),
                           ),
                         );

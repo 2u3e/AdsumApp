@@ -9,7 +9,6 @@ import '../../data/mock_work_orders.dart';
 import '../../domain/entities/work_enums.dart';
 import '../../domain/entities/work_order.dart';
 
-/// Is emri liste ekrani
 class WorkOrderListScreen extends ConsumerStatefulWidget {
   const WorkOrderListScreen({super.key});
 
@@ -27,8 +26,6 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
 
   List<WorkOrder> get _filteredOrders {
     var orders = mockWorkOrders.toList();
-
-    // Metin araması
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
       orders = orders.where((w) =>
@@ -40,8 +37,6 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
           (w.applicantName?.toLowerCase().contains(q) ?? false) ||
           (w.assigneeName?.toLowerCase().contains(q) ?? false)).toList();
     }
-
-    // Adres filtresi
     if (_addressFilter.isNotEmpty) {
       final q = _addressFilter.toLowerCase();
       orders = orders.where((w) =>
@@ -50,33 +45,26 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
           (w.street?.toLowerCase().contains(q) ?? false) ||
           w.district.toLowerCase().contains(q)).toList();
     }
-
-    // Durum filtresi
     if (_selectedStatuses.isNotEmpty) {
       orders = orders.where((w) => _selectedStatuses.contains(w.status)).toList();
     }
-
-    // Oncelik filtresi
     if (_selectedPriorities.isNotEmpty) {
       orders = orders.where((w) => _selectedPriorities.contains(w.priority)).toList();
     }
-
-    // Siralama: oncelik (yuksek once), sonra tarih (yeni once)
     orders.sort((a, b) {
       final pc = b.priority.value.compareTo(a.priority.value);
       if (pc != 0) return pc;
       return b.createdAt.compareTo(a.createdAt);
     });
-
     return orders;
   }
 
   int get _activeFilterCount {
-    int count = 0;
-    if (_selectedStatuses.isNotEmpty) count++;
-    if (_selectedPriorities.isNotEmpty) count++;
-    if (_addressFilter.isNotEmpty) count++;
-    return count;
+    int c = 0;
+    if (_selectedStatuses.isNotEmpty) c++;
+    if (_selectedPriorities.isNotEmpty) c++;
+    if (_addressFilter.isNotEmpty) c++;
+    return c;
   }
 
   @override
@@ -91,506 +79,321 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
     final orders = _filteredOrders;
 
     return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                onChanged: (v) => setState(() => _searchQuery = v),
-                decoration: InputDecoration(
-                  hintText: 'İş no, tür, adres, kişi ara...',
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                  hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                      ),
-                ),
-              )
-            : null,
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search_rounded),
-            onPressed: () {
-              setState(() {
-                _isSearching = !_isSearching;
-                if (!_isSearching) {
-                  _searchController.clear();
-                  _searchQuery = '';
-                }
-              });
-            },
-          ),
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.tune_rounded),
-                onPressed: () => _showFilterSheet(context),
-              ),
-              if (_activeFilterCount > 0)
-                Positioned(
-                  right: 6,
-                  top: 6,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // Custom header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
+              child: Row(
+                children: [
+                  if (!_isSearching)
+                    Expanded(
+                      child: Text('İş Emirleri',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
                     ),
-                    child: Center(
-                      child: Text(
-                        '$_activeFilterCount',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                  if (_isSearching)
+                    Expanded(
+                      child: Container(
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.gray800 : AppColors.gray100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          autofocus: true,
+                          onChanged: (v) => setState(() => _searchQuery = v),
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'İş no, tür, adres, kişi...',
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            hintStyle: TextStyle(
+                              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                              fontSize: 14,
+                            ),
+                            prefixIcon: Icon(Icons.search, size: 20,
+                                color: isDark ? AppColors.gray500 : AppColors.gray400),
+                          ),
+                        ),
                       ),
                     ),
+                  IconButton(
+                    icon: Icon(_isSearching ? Icons.close : Icons.search_rounded, size: 22),
+                    onPressed: () => setState(() {
+                      _isSearching = !_isSearching;
+                      if (!_isSearching) { _searchController.clear(); _searchQuery = ''; }
+                    }),
                   ),
-                ),
-            ],
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(const Duration(seconds: 1));
-          setState(() {});
-        },
-        child: orders.isEmpty
-            ? _buildEmptyState(context, isDark)
-            : ListView.builder(
-                padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 100),
-                itemCount: orders.length,
-                itemBuilder: (context, index) {
-                  final order = orders[index];
-                  return _WorkOrderCard(
-                    order: order,
-                    onTap: () => context.push('/work-orders/${order.id}'),
-                    onLongPress: () => _showQuickActions(context, order),
-                  );
-                },
+                  Stack(
+                    children: [
+                      IconButton(icon: const Icon(Icons.tune_rounded, size: 22), onPressed: () => _showFilterSheet(context)),
+                      if (_activeFilterCount > 0)
+                        Positioned(right: 6, top: 6, child: Container(
+                          width: 16, height: 16,
+                          decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                          child: Center(child: Text('$_activeFilterCount', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700))),
+                        )),
+                    ],
+                  ),
+                ],
               ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/work-orders/create'),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Yeni İş Emri'),
-      ),
-    );
-  }
+            ),
 
-  Widget _buildEmptyState(BuildContext context, bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search_off_rounded, size: 64, color: isDark ? AppColors.gray600 : AppColors.gray300),
-          AppSpacing.verticalLg,
-          Text('Sonuç bulunamadı', style: Theme.of(context).textTheme.titleMedium),
-          AppSpacing.verticalXs,
-          Text(
-            'Filtre veya arama kriterlerinizi değiştirin',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                ),
-          ),
-        ],
+            // Liste
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async { await Future.delayed(const Duration(seconds: 1)); setState(() {}); },
+                child: orders.isEmpty
+                    ? _buildEmpty(context, isDark)
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 120),
+                        itemCount: orders.length,
+                        itemBuilder: (context, index) {
+                          final order = orders[index];
+                          return Dismissible(
+                            key: Key(order.id),
+                            direction: DismissDirection.endToStart,
+                            confirmDismiss: (_) async {
+                              HapticFeedback.mediumImpact();
+                              _showQuickActions(context, order);
+                              return false;
+                            },
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 24),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(Icons.more_horiz_rounded, color: AppColors.primary),
+                            ),
+                            child: _WorkCard(
+                              order: order,
+                              onTap: () => context.push('/work-orders/${order.id}'),
+                              onLongPress: () { HapticFeedback.mediumImpact(); _showQuickActions(context, order); },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
-    );
-  }
-
-  void _showQuickActions(BuildContext context, WorkOrder order) {
-    HapticFeedback.mediumImpact();
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40, height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(color: AppColors.gray300, borderRadius: AppSpacing.borderRadiusFull),
-              ),
-              ListTile(
-                leading: const Icon(Icons.visibility_rounded, color: AppColors.primary),
-                title: const Text('Detay Görüntüle'),
-                onTap: () {
-                  Navigator.pop(context);
-                  context.push('/work-orders/${order.id}');
-                },
-              ),
-              if (order.status != WorkStatus.completed && order.status != WorkStatus.cancelled) ...[
-                ListTile(
-                  leading: const Icon(Icons.directions_car_rounded, color: AppColors.info),
-                  title: const Text('İntikal Et'),
-                  onTap: () => Navigator.pop(context),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.play_circle_outline_rounded, color: AppColors.success),
-                  title: const Text('Çalışmaya Başla'),
-                  onTap: () => Navigator.pop(context),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.person_add_outlined, color: AppColors.warning),
-                  title: const Text('Yeniden Ata'),
-                  onTap: () => Navigator.pop(context),
-                ),
-              ],
-            ],
-          ),
+      // FAB - compact pill
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: FloatingActionButton.small(
+          onPressed: () => context.push('/work-orders/create'),
+          elevation: 4,
+          child: const Icon(Icons.add_rounded, size: 24),
         ),
       ),
     );
   }
 
+  Widget _buildEmpty(BuildContext context, bool isDark) {
+    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Icon(Icons.search_off_rounded, size: 56, color: isDark ? AppColors.gray600 : AppColors.gray300),
+      AppSpacing.verticalMd,
+      Text('Sonuç bulunamadı', style: Theme.of(context).textTheme.titleMedium),
+    ]));
+  }
+
+  void _showQuickActions(BuildContext context, WorkOrder order) {
+    showModalBottomSheet(context: context, builder: (context) => SafeArea(child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(color: AppColors.gray300, borderRadius: AppSpacing.borderRadiusFull)),
+        ListTile(leading: const Icon(Icons.visibility_rounded, color: AppColors.primary),
+          title: const Text('Detay'), onTap: () { Navigator.pop(context); context.push('/work-orders/${order.id}'); }),
+        if (order.status != WorkStatus.completed && order.status != WorkStatus.cancelled) ...[
+          ListTile(leading: const Icon(Icons.directions_car_rounded, color: AppColors.info),
+            title: const Text('İntikal Et'), onTap: () => Navigator.pop(context)),
+          ListTile(leading: const Icon(Icons.play_circle_outline_rounded, color: AppColors.success),
+            title: const Text('Başla'), onTap: () => Navigator.pop(context)),
+        ],
+      ]),
+    )));
+  }
+
   void _showFilterSheet(BuildContext context) {
-    final tempStatuses = Set<WorkStatus>.from(_selectedStatuses);
-    final tempPriorities = Set<WorkPriority>.from(_selectedPriorities);
-    final addressCtrl = TextEditingController(text: _addressFilter);
+    final tmpS = Set<WorkStatus>.from(_selectedStatuses);
+    final tmpP = Set<WorkPriority>.from(_selectedPriorities);
+    final addrCtrl = TextEditingController(text: _addressFilter);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) {
-          return DraggableScrollableSheet(
-            initialChildSize: 0.7,
-            minChildSize: 0.4,
-            maxChildSize: 0.9,
-            expand: false,
-            builder: (context, scrollController) {
-              return Padding(
-                padding: AppSpacing.screenPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40, height: 4,
-                        margin: const EdgeInsets.only(top: 8, bottom: 16),
-                        decoration: BoxDecoration(color: AppColors.gray300, borderRadius: AppSpacing.borderRadiusFull),
-                      ),
-                    ),
-                    Text('Filtrele', style: Theme.of(context).textTheme.headlineSmall),
-                    AppSpacing.verticalLg,
-
-                    // Adres arama
-                    Text('Adres / Mahalle / Cadde', style: Theme.of(context).textTheme.titleSmall),
-                    AppSpacing.verticalSm,
-                    TextField(
-                      controller: addressCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Örn: Tecde, İnönü Caddesi...',
-                        prefixIcon: Icon(Icons.location_on_outlined),
-                      ),
-                    ),
-                    AppSpacing.verticalLg,
-
-                    // Durum
-                    Text('Durum', style: Theme.of(context).textTheme.titleSmall),
-                    AppSpacing.verticalSm,
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: WorkStatus.values.map((s) {
-                        final selected = tempStatuses.contains(s);
-                        return FilterChip(
-                          label: Text(s.label),
-                          selected: selected,
-                          selectedColor: s.color.withValues(alpha: 0.2),
-                          checkmarkColor: s.color,
-                          onSelected: (v) => setSheetState(() {
-                            v ? tempStatuses.add(s) : tempStatuses.remove(s);
-                          }),
-                        );
-                      }).toList(),
-                    ),
-                    AppSpacing.verticalLg,
-
-                    // Oncelik
-                    Text('Öncelik', style: Theme.of(context).textTheme.titleSmall),
-                    AppSpacing.verticalSm,
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: WorkPriority.values.map((p) {
-                        final selected = tempPriorities.contains(p);
-                        return FilterChip(
-                          label: Text(p.label),
-                          selected: selected,
-                          selectedColor: p.color.withValues(alpha: 0.2),
-                          checkmarkColor: p.color,
-                          onSelected: (v) => setSheetState(() {
-                            v ? tempPriorities.add(p) : tempPriorities.remove(p);
-                          }),
-                        );
-                      }).toList(),
-                    ),
-
-                    const Spacer(),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              setState(() {
-                                _selectedStatuses = {};
-                                _selectedPriorities = {};
-                                _addressFilter = '';
-                              });
-                              Navigator.pop(context);
-                            },
-                            child: const Text('Temizle'),
-                          ),
-                        ),
-                        AppSpacing.horizontalMd,
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                _selectedStatuses = tempStatuses;
-                                _selectedPriorities = tempPriorities;
-                                _addressFilter = addressCtrl.text.trim();
-                              });
-                              Navigator.pop(context);
-                            },
-                            child: const Text('Uygula'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    AppSpacing.verticalLg,
-                  ],
-                ),
-              );
-            },
-          );
-        },
-      ),
+      builder: (context) => StatefulBuilder(builder: (context, setS) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          minChildSize: 0.4,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (context, sc) => Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: ListView(
+              controller: sc,
+              children: [
+                Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 12, bottom: 20),
+                  decoration: BoxDecoration(color: AppColors.gray300, borderRadius: AppSpacing.borderRadiusFull))),
+                Text('Filtrele', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 20),
+                Text('Adres / Mahalle / Cadde', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                TextField(controller: addrCtrl,
+                  decoration: const InputDecoration(hintText: 'Örn: Tecde, İnönü Caddesi...', prefixIcon: Icon(Icons.location_on_outlined))),
+                const SizedBox(height: 20),
+                Text('Durum', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Wrap(spacing: 8, runSpacing: 8, children: WorkStatus.values.map((s) => FilterChip(
+                  label: Text(s.label),
+                  selected: tmpS.contains(s),
+                  selectedColor: s.color.withValues(alpha: 0.2),
+                  checkmarkColor: s.color,
+                  onSelected: (v) => setS(() => v ? tmpS.add(s) : tmpS.remove(s)),
+                )).toList()),
+                const SizedBox(height: 20),
+                Text('Öncelik', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Wrap(spacing: 8, runSpacing: 8, children: WorkPriority.values.map((p) => FilterChip(
+                  label: Text(p.label),
+                  selected: tmpP.contains(p),
+                  selectedColor: p.color.withValues(alpha: 0.2),
+                  checkmarkColor: p.color,
+                  onSelected: (v) => setS(() => v ? tmpP.add(p) : tmpP.remove(p)),
+                )).toList()),
+                const SizedBox(height: 28),
+                Row(children: [
+                  Expanded(child: OutlinedButton(
+                    onPressed: () { setState(() { _selectedStatuses = {}; _selectedPriorities = {}; _addressFilter = ''; }); Navigator.pop(context); },
+                    child: const Text('Temizle'))),
+                  const SizedBox(width: 12),
+                  Expanded(child: ElevatedButton(
+                    onPressed: () { setState(() { _selectedStatuses = tmpS; _selectedPriorities = tmpP; _addressFilter = addrCtrl.text.trim(); }); Navigator.pop(context); },
+                    child: const Text('Uygula'))),
+                ]),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 }
 
-/// Is emri karti - durum rengiyle sol border
-class _WorkOrderCard extends StatelessWidget {
+/// Yeni is karti - kompakt, temiz, vurucu
+class _WorkCard extends StatelessWidget {
   final WorkOrder order;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
-  const _WorkOrderCard({
-    required this.order,
-    required this.onTap,
-    required this.onLongPress,
-  });
+  const _WorkCard({required this.order, required this.onTap, required this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: isDark ? order.status.bgColor.withValues(alpha: 0.15) : order.status.bgColor,
-        borderRadius: AppSpacing.borderRadiusMd,
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
-          borderRadius: AppSpacing.borderRadiusMd,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: AppSpacing.borderRadiusMd,
-              border: Border.all(color: order.status.borderColor),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.gray800 : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border(
+              left: BorderSide(color: order.status.color, width: 4),
             ),
-            child: IntrinsicHeight(
-              child: Row(
+            boxShadow: [
+              if (!isDark) BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Satir 1: no + oncelik ikonu + durum
+              Row(
                 children: [
-                  // Sol renk cubugu
+                  // Oncelik ikonu
                   Container(
-                    width: 5,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
-                      color: order.status.color,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(AppSpacing.radiusMd),
-                        bottomLeft: Radius.circular(AppSpacing.radiusMd),
-                      ),
+                      color: order.priority.color.withValues(alpha: isDark ? 0.2 : 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(order.priority.icon, size: 14, color: order.priority.color),
+                  ),
+                  const SizedBox(width: 10),
+                  // Is no + tur
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(order.workNumber, style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              fontFamily: 'monospace', letterSpacing: 0.5,
+                              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)),
+                        Text(order.workTypeName, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                      ],
                     ),
                   ),
-                  // Kart icerigi
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Ust satir: is no + oncelik
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                order.workNumber,
-                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      fontFamily: 'monospace',
-                                      letterSpacing: 0.5,
-                                    ),
-                              ),
-                              _PriorityBadge(priority: order.priority),
-                            ],
-                          ),
-                          AppSpacing.verticalSm,
-
-                          // Is turu
-                          Row(
-                            children: [
-                              Icon(order.status.icon, size: 16, color: order.status.color),
-                              AppSpacing.horizontalXs,
-                              Text(
-                                order.workTypeName,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                            ],
-                          ),
-                          AppSpacing.verticalXs,
-
-                          // Adres
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.location_on_outlined,
-                                size: 14,
-                                color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                              ),
-                              AppSpacing.horizontalXs,
-                              Expanded(
-                                child: Text(
-                                  order.shortAddress,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                      ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          AppSpacing.verticalMd,
-
-                          // Alt satir: durum + bekleme + tarih
-                          Row(
-                            children: [
-                              // Durum chip
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: order.status.color.withValues(alpha: 0.15),
-                                  borderRadius: AppSpacing.borderRadiusFull,
-                                ),
-                                child: Text(
-                                  order.status.label,
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                        color: order.status.color,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 10,
-                                      ),
-                                ),
-                              ),
-                              AppSpacing.horizontalSm,
-
-                              // Bekleme suresi
-                              Icon(
-                                Icons.schedule_rounded,
-                                size: 13,
-                                color: isDark ? AppColors.gray500 : AppColors.gray400,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                order.waitingDuration,
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                                      fontSize: 10,
-                                    ),
-                              ),
-
-                              const Spacer(),
-
-                              // Yorum sayisi
-                              if (order.commentCount > 0) ...[
-                                Icon(
-                                  Icons.chat_bubble_outline_rounded,
-                                  size: 13,
-                                  color: isDark ? AppColors.gray500 : AppColors.gray400,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  '${order.commentCount}',
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                                        fontSize: 10,
-                                      ),
-                                ),
-                                AppSpacing.horizontalSm,
-                              ],
-
-                              // Tarih
-                              Text(
-                                order.timeAgo,
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                                      fontSize: 10,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                  // Durum chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: order.status.color.withValues(alpha: isDark ? 0.2 : 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(order.status.icon, size: 12, color: order.status.color),
+                        const SizedBox(width: 4),
+                        Text(order.status.label, style: TextStyle(
+                          color: order.status.color, fontSize: 11, fontWeight: FontWeight.w700)),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 10),
+
+              // Satir 2: adres
+              Row(
+                children: [
+                  Icon(Icons.location_on_outlined, size: 14,
+                      color: isDark ? AppColors.gray500 : AppColors.gray400),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(order.shortAddress, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+                  ),
+                  // Zaman
+                  Text(order.timeAgo, style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                        fontSize: 10)),
+                ],
+              ),
+            ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Oncelik badge'i
-class _PriorityBadge extends StatelessWidget {
-  final WorkPriority priority;
-  const _PriorityBadge({required this.priority});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: priority.color.withValues(alpha: 0.12),
-        borderRadius: AppSpacing.borderRadiusFull,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6, height: 6,
-            decoration: BoxDecoration(color: priority.color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            priority.label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: priority.color,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 10,
-                ),
-          ),
-        ],
       ),
     );
   }

@@ -3,296 +3,330 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../work_orders/data/mock_work_orders.dart';
 
-/// Ana sayfa / Dashboard ekrani
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
-    final user = authState.value?.user;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final stats = DashboardStats.fromWorkOrders(mockWorkOrders);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _getGreeting(),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-            ),
-            Text(
-              user?.fullName ?? 'Kullanıcı',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: Stack(
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          onRefresh: () async => await Future.delayed(const Duration(seconds: 1)),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 120),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.notifications_outlined),
-                Positioned(
-                  right: 0,
-                  top: 0,
+                const SizedBox(height: 16),
+
+                // Header: minimal, sadece tarih + bildirim
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _formatDate(),
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                                  letterSpacing: 0.5,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Gösterge Paneli',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                        ],
+                      ),
+                      // Bildirim butonu
+                      GestureDetector(
+                        onTap: () {
+                          final shell = StatefulNavigationShell.of(context);
+                          shell.goBranch(2);
+                        },
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.gray800 : AppColors.gray100,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Icon(Icons.notifications_outlined, size: 22,
+                                  color: isDark ? AppColors.gray300 : AppColors.gray600),
+                              Positioned(
+                                right: 11, top: 10,
+                                child: Container(
+                                  width: 8, height: 8,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isDark ? AppColors.gray800 : AppColors.gray100,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Ana ozet karti - gradient
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1E40AF), Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Açık İş Emri', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text('Bugün', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${stats.openCount}',
+                              style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w800, height: 1),
+                            ),
+                            const SizedBox(width: 12),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                'toplam iş emri',
+                                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        // Alt bar: 3 mini stat
+                        Row(
+                          children: [
+                            _MiniStat(value: '${stats.todayCount}', label: 'Bugün Gelen', color: Colors.white),
+                            _miniDivider(),
+                            _MiniStat(value: '${stats.yesterdayCount}', label: 'Dünden', color: Colors.white),
+                            _miniDivider(),
+                            _MiniStat(value: '${stats.inProgressCount}', label: 'Devam Eden', color: Colors.white),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
-            onPressed: () {
-              // Bildirimler sekmesine git (index 2)
-              final shell = StatefulNavigationShell.of(context);
-              shell.goBranch(2);
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(const Duration(seconds: 1));
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppSpacing.verticalLg,
-              _StatsSection(stats: stats),
-              AppSpacing.verticalXl,
-              Text(
-                'Hızlı İşlemler',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              AppSpacing.verticalMd,
-              const _QuickActions(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+                const SizedBox(height: 20),
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 6) return 'İyi geceler';
-    if (hour < 12) return 'Günaydın';
-    if (hour < 18) return 'İyi günler';
-    return 'İyi akşamlar';
-  }
-}
+                // Durum kartlari - yatay
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Expanded(child: _StatusCard(
+                        icon: Icons.autorenew_rounded,
+                        label: 'Devam Eden',
+                        value: '${stats.inProgressCount}',
+                        color: AppColors.warning,
+                        isDark: isDark,
+                      )),
+                      const SizedBox(width: 12),
+                      Expanded(child: _StatusCard(
+                        icon: Icons.check_circle_rounded,
+                        label: 'Tamamlanan',
+                        value: '${stats.completedCount}',
+                        color: AppColors.success,
+                        isDark: isDark,
+                      )),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
 
-/// Istatistik kartlari - 5 adet, ilk satir 3, ikinci satir 2
-class _StatsSection extends StatelessWidget {
-  final DashboardStats stats;
-  const _StatsSection({required this.stats});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Ilk satir: 3 kart
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                title: 'Açık',
-                value: '${stats.openCount}',
-                icon: Icons.assignment_outlined,
-                color: AppColors.primary,
-              ),
-            ),
-            AppSpacing.horizontalMd,
-            Expanded(
-              child: _StatCard(
-                title: 'Bugün Gelen',
-                value: '${stats.todayCount}',
-                icon: Icons.today_rounded,
-                color: AppColors.info,
-              ),
-            ),
-            AppSpacing.horizontalMd,
-            Expanded(
-              child: _StatCard(
-                title: 'Dünden',
-                value: '${stats.yesterdayCount}',
-                icon: Icons.history_rounded,
-                color: AppColors.gray500,
-              ),
-            ),
-          ],
-        ),
-        AppSpacing.verticalMd,
-        // Ikinci satir: 2 kart
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                title: 'Devam Eden',
-                value: '${stats.inProgressCount}',
-                icon: Icons.autorenew_rounded,
-                color: AppColors.warning,
-              ),
-            ),
-            AppSpacing.horizontalMd,
-            Expanded(
-              child: _StatCard(
-                title: 'Tamamlanan',
-                value: '${stats.completedCount}',
-                icon: Icons.check_circle_outline_rounded,
-                color: AppColors.success,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-/// Tek istatistik karti
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: color, size: 20),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w800,
-                      ),
+                // Hizli islemler
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text('Hızlı İşlemler', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Expanded(child: _ActionCard(
+                        icon: Icons.add_circle_rounded,
+                        label: 'Yeni İş Emri',
+                        gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                        onTap: () => context.push('/work-orders/create'),
+                      )),
+                      const SizedBox(width: 12),
+                      Expanded(child: _ActionCard(
+                        icon: Icons.map_rounded,
+                        label: 'Harita',
+                        gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+                        onTap: () {},
+                      )),
+                    ],
+                  ),
                 ),
               ],
             ),
-            AppSpacing.verticalXs,
-            Text(
-              title,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-            ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+
+  String _formatDate() {
+    final now = DateTime.now();
+    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+    return '${days[now.weekday - 1]}, ${now.day} ${months[now.month - 1]}';
+  }
+
+  static Widget _miniDivider() {
+    return Container(
+      width: 1,
+      height: 28,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      color: Colors.white.withValues(alpha: 0.2),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color color;
+  const _MiniStat({required this.value, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(color: color.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }
 }
 
-/// Hizli aksiyonlar
-class _QuickActions extends StatelessWidget {
-  const _QuickActions();
+class _StatusCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  final bool isDark;
+  const _StatusCard({required this.icon, required this.label, required this.value, required this.color, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.add_circle_outline_rounded,
-            label: 'Yeni İş Emri',
-            color: AppColors.primary,
-            onTap: () {
-              context.push('/work-orders/create');
-            },
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.gray800 : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: isDark ? 0.2 : 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 22),
           ),
-        ),
-        AppSpacing.horizontalMd,
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.map_outlined,
-            label: 'Harita',
-            color: AppColors.success,
-            onTap: () {
-              // TODO: Harita gorunumu
-            },
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+              Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)),
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _QuickActionButton extends StatelessWidget {
+class _ActionCard extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color color;
+  final List<Color> gradient;
   final VoidCallback onTap;
-
-  const _QuickActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
+  const _ActionCard({required this.icon, required this.label, required this.gradient, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: AppSpacing.borderRadiusMd,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: isDark ? 0.15 : 0.08),
-          borderRadius: AppSpacing.borderRadiusMd,
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          gradient: LinearGradient(colors: gradient),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: gradient.first.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 28),
-            AppSpacing.verticalSm,
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
-              textAlign: TextAlign.center,
-            ),
+            Icon(icon, color: Colors.white, size: 28),
+            const SizedBox(height: 6),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
