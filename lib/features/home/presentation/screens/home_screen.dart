@@ -141,7 +141,7 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-/// Hero kart - toplam ust, 4 mini stat altta 2x2 grid
+/// Hero kart - ust satir: toplam + tamamlanan; alt satir: 1x3 stat
 class _HeroStatsCard extends StatelessWidget {
   final DashboardStats stats;
   const _HeroStatsCard({required this.stats});
@@ -166,13 +166,13 @@ class _HeroStatsCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Ust: toplam
+          // Ust satir: Toplam + Tamamlanan
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Sol: etiket + rakam
+                // Sol: Toplam Acik Is Emri
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +187,7 @@ class _HeroStatsCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
@@ -195,17 +195,17 @@ class _HeroStatsCard extends StatelessWidget {
                             '${stats.totalCount}',
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 52,
+                              fontSize: 48,
                               fontWeight: FontWeight.w800,
                               height: 1,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.only(bottom: 8),
                             child: Text(
                               'adet',
-                              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14),
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
                             ),
                           ),
                         ],
@@ -213,23 +213,42 @@ class _HeroStatsCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Sag: formul bilgisi
+                // Sag: Tamamlanan - yesil vurgu
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(10),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF059669), Color(0xFF10B981)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        '${stats.yesterdayCount} + ${stats.todayCount}',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11, fontWeight: FontWeight.w600),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Tamamlanan',
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.95), fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 2),
                       Text(
-                        '− ${stats.completedCount}',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 11, fontWeight: FontWeight.w600),
+                        '${stats.completedCount}',
+                        style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800, height: 1.1),
                       ),
                     ],
                   ),
@@ -241,49 +260,35 @@ class _HeroStatsCard extends StatelessWidget {
           // Ayirac cizgi
           Container(
             height: 1,
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            color: Colors.white.withValues(alpha: 0.2),
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            color: Colors.white.withValues(alpha: 0.18),
           ),
 
-          // Alt: 4 stat 2x2 grid
+          // Alt satir: 1x3 stat tile
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    _StatTile(
-                      icon: Icons.history_rounded,
-                      label: 'Dünden Kalan',
-                      value: stats.yesterdayCount,
-                    ),
-                    _verticalDivider(),
-                    _StatTile(
-                      icon: Icons.today_rounded,
-                      label: 'Bugün Gelen',
-                      value: stats.todayCount,
-                      isHighlighted: true,
-                    ),
-                  ],
+                _StatTile(
+                  icon: Icons.history_rounded,
+                  label: 'Dünden',
+                  value: stats.yesterdayCount,
+                  accentColor: const Color(0xFFFDBA74), // soft turuncu
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Container(height: 1, color: Colors.white.withValues(alpha: 0.15)),
+                _verticalDivider(),
+                _StatTile(
+                  icon: Icons.today_rounded,
+                  label: 'Bugün',
+                  value: stats.todayCount,
+                  accentColor: const Color(0xFF93C5FD), // ac.mavi - daha parlak
+                  isHighlighted: true,
                 ),
-                Row(
-                  children: [
-                    _StatTile(
-                      icon: Icons.autorenew_rounded,
-                      label: 'Devam Eden',
-                      value: stats.inProgressCount,
-                    ),
-                    _verticalDivider(),
-                    _StatTile(
-                      icon: Icons.check_circle_rounded,
-                      label: 'Tamamlanan',
-                      value: stats.completedCount,
-                    ),
-                  ],
+                _verticalDivider(),
+                _StatTile(
+                  icon: Icons.autorenew_rounded,
+                  label: 'Devam Eden',
+                  value: stats.inProgressCount,
+                  accentColor: const Color(0xFFFCD34D), // soft amber
                 ),
               ],
             ),
@@ -296,23 +301,25 @@ class _HeroStatsCard extends StatelessWidget {
   Widget _verticalDivider() {
     return Container(
       width: 1,
-      height: 38,
+      height: 42,
       color: Colors.white.withValues(alpha: 0.15),
     );
   }
 }
 
-/// 2x2 gridde tek stat kutusu
+/// Alt satirdaki stat tile - vertical layout, accent color'li ikon
 class _StatTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final int value;
+  final Color accentColor;
   final bool isHighlighted;
 
   const _StatTile({
     required this.icon,
     required this.label,
     required this.value,
+    required this.accentColor,
     this.isHighlighted = false,
   });
 
@@ -320,32 +327,42 @@ class _StatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        child: Column(
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: isHighlighted ? 0.25 : 0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: Colors.white, size: 18),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 1),
+                  ),
+                  child: Icon(icon, color: accentColor, size: 13),
+                ),
+                const SizedBox(width: 8),
                 Text(
                   '$value',
-                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, height: 1.1),
-                ),
-                Text(
-                  label,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 10.5, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isHighlighted ? 26 : 23,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
                 ),
               ],
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: isHighlighted ? 0.9 : 0.7),
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
