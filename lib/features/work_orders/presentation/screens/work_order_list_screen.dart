@@ -252,7 +252,7 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                 child: orders.isEmpty
                     ? _buildEmpty(context, isDark)
                     : ListView.builder(
-                        padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 20),
+                        padding: const EdgeInsets.only(left: 12, right: 12, top: 12, bottom: 20),
                         itemCount: orders.length,
                         itemBuilder: (context, index) {
                           final order = orders[index];
@@ -676,278 +676,182 @@ class _WorkCardState extends State<_WorkCard> {
             opacity: isCompleted ? 0.78 : 1.0,
             duration: const Duration(milliseconds: 200),
             child: Container(
-              height: 104,
               decoration: BoxDecoration(
                 color: isDark ? AppColors.gray800 : Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
                     color: isHighPriority
                         ? statusColor.withValues(alpha: isDark ? 0.25 : 0.12)
                         : Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                    blurRadius: isHighPriority ? 16 : 8,
+                    blurRadius: isHighPriority ? 14 : 8,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  // SOL: Status accent strip + work type icon
-                  Container(
-                    width: 58,
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        bottomLeft: Radius.circular(16),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // SOL: Dar status strip + tek icon
+                    Container(
+                      width: 46,
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(14),
+                          bottomLeft: Radius.circular(14),
+                        ),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            statusColor.withValues(alpha: isDark ? 0.95 : 1.0),
+                            statusColor.withValues(alpha: isDark ? 0.75 : 0.82),
+                          ],
+                        ),
                       ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          statusColor.withValues(alpha: isDark ? 0.95 : 1.0),
-                          statusColor.withValues(alpha: isDark ? 0.75 : 0.82),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Positioned(
+                            right: -6,
+                            bottom: -6,
+                            child: Icon(
+                              _workTypeIcon(order.workTypeName),
+                              size: 44,
+                              color: Colors.white.withValues(alpha: 0.12),
+                            ),
+                          ),
+                          Icon(
+                            _workTypeIcon(order.workTypeName),
+                            size: 24,
+                            color: Colors.white,
+                          ),
                         ],
                       ),
                     ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Buyuk arka plan ikonu (dekoratif)
-                        Positioned(
-                          right: -8,
-                          bottom: -8,
-                          child: Icon(
-                            _workTypeIcon(order.workTypeName),
-                            size: 56,
-                            color: Colors.white.withValues(alpha: 0.12),
-                          ),
-                        ),
-                        // Merkez ikon
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _workTypeIcon(order.workTypeName),
-                              size: 26,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(height: 4),
-                            // Oncelik dot serisi (1-5)
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(5, (i) {
-                                final filled = i < order.priority.value;
-                                return Container(
-                                  width: 4, height: 4,
-                                  margin: const EdgeInsets.symmetric(horizontal: 1),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: filled ? 0.95 : 0.25),
-                                    shape: BoxShape.circle,
-                                  ),
-                                );
-                              }),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
 
-                  // SAG: icerik
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Top: is tipi + durum dot
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      order.workTypeName,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.1,
-                                        decoration: isCompleted ? TextDecoration.lineThrough : null,
-                                        decorationColor: isDark ? AppColors.gray500 : AppColors.gray400,
-                                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                    // SAG: 3 satir icerik
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // SATIR 1: is no · durum · zaman
+                            Row(
+                              children: [
+                                Text(
+                                  order.workNumber,
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontFamily: 'monospace',
+                                    letterSpacing: 0.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? AppColors.gray400 : AppColors.gray500,
+                                  ),
+                                ),
+                                _sep(isDark),
+                                Text(
+                                  order.status.label,
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: statusColor,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Icon(Icons.schedule_rounded, size: 11,
+                                    color: isDark ? AppColors.gray500 : AppColors.gray400),
+                                const SizedBox(width: 3),
+                                Text(
+                                  order.timeAgo,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // SATIR 2: is turu + oncelik rozeti
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    order.workTypeName,
+                                    style: TextStyle(
+                                      fontSize: 15.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.1,
+                                      decoration: isCompleted ? TextDecoration.lineThrough : null,
+                                      decorationColor: isDark ? AppColors.gray500 : AppColors.gray400,
+                                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Row(
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isHighPriority) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: order.priority.color.withValues(alpha: isDark ? 0.22 : 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        Icon(order.priority.icon, size: 11, color: order.priority.color),
+                                        const SizedBox(width: 3),
                                         Text(
-                                          order.workNumber,
+                                          order.priority.label.toUpperCase(),
                                           style: TextStyle(
-                                            fontSize: 10.5,
-                                            fontFamily: 'monospace',
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800,
                                             letterSpacing: 0.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: isDark ? AppColors.gray500 : AppColors.gray400,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          width: 3, height: 3,
-                                          decoration: BoxDecoration(
-                                            color: isDark ? AppColors.gray600 : AppColors.gray300,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          order.status.label,
-                                          style: TextStyle(
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w700,
-                                            color: statusColor,
+                                            color: order.priority.color,
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                              // Yuksek oncelik isareti
-                              if (isHighPriority)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: order.priority.color.withValues(alpha: isDark ? 0.22 : 0.12),
-                                    borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(order.priority.icon, size: 11, color: order.priority.color),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        order.priority.label.toUpperCase(),
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.5,
-                                          color: order.priority.color,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
+                                ],
+                              ],
+                            ),
 
-                          // Bottom: address + meta
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.place_outlined,
-                                    size: 12,
-                                    color: isDark ? AppColors.gray500 : AppColors.gray400,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Expanded(
-                                    child: Text(
-                                      order.shortAddress,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 5),
-                              Row(
-                                children: [
-                                  // Atanan kisi
-                                  if (order.assigneeName != null) ...[
-                                    _MiniAvatar(name: order.assigneeName!),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      order.assigneeName!.split(' ').first,
-                                      style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? AppColors.textSecondaryDark : AppColors.gray700,
-                                      ),
-                                    ),
-                                  ] else ...[
-                                    Icon(Icons.person_off_outlined, size: 13,
-                                        color: isDark ? AppColors.gray500 : AppColors.gray400),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Atanmadı',
-                                      style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FontStyle.italic,
-                                        color: isDark ? AppColors.gray500 : AppColors.gray400,
-                                      ),
-                                    ),
-                                  ],
-                                  const Spacer(),
-                                  if (order.commentCount > 0) ...[
-                                    Icon(Icons.chat_bubble_outline_rounded, size: 11,
-                                        color: isDark ? AppColors.gray500 : AppColors.gray400),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      '${order.commentCount}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                  ],
-                                  if (order.attachmentCount > 0) ...[
-                                    Icon(Icons.attach_file_rounded, size: 11,
-                                        color: isDark ? AppColors.gray500 : AppColors.gray400),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      '${order.attachmentCount}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                  ],
-                                  Icon(Icons.schedule_rounded, size: 11,
-                                      color: isDark ? AppColors.gray500 : AppColors.gray400),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    order.timeAgo,
+                            // SATIR 3: adres
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.place_outlined,
+                                  size: 12,
+                                  color: isDark ? AppColors.gray500 : AppColors.gray400,
+                                ),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(
+                                    order.shortAddress,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                                      fontSize: 11.5,
+                                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -957,53 +861,14 @@ class _WorkCardState extends State<_WorkCard> {
   }
 }
 
-/// Kisi adindan ilk harfleri alan mini avatar
-class _MiniAvatar extends StatelessWidget {
-  final String name;
-  const _MiniAvatar({required this.name});
-
-  String get _initials {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
-  }
-
-  Color get _bgColor {
-    // Ad hash'inden tutarli renk
-    final colors = [
-      const Color(0xFF3B82F6), const Color(0xFF10B981), const Color(0xFF8B5CF6),
-      const Color(0xFFF59E0B), const Color(0xFFEF4444), const Color(0xFF06B6D4),
-      const Color(0xFFEC4899), const Color(0xFF14B8A6),
-    ];
-    return colors[name.hashCode.abs() % colors.length];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 18,
-      height: 18,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_bgColor, _bgColor.withValues(alpha: 0.7)],
-        ),
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          _initials,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 8.5,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.2,
-          ),
+/// Kucuk ayirac (· nokta) helper
+Widget _sep(bool isDark) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Container(
+        width: 3, height: 3,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.gray600 : AppColors.gray300,
+          shape: BoxShape.circle,
         ),
       ),
     );
-  }
-}
