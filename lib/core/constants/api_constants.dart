@@ -30,11 +30,6 @@ class ApiConstants {
   static const String organizations = '/Organizations';
   static const String employees = '/Employees';
 
-  // Notification (NMS) endpoints
-  static const String notifications = '/Notification';
-  static String notificationById(String id) => '/Notification/$id';
-  static const String registerDevice = '/Notification/device';
-
   // Core endpoints
   static const String citizens = '/Citizens/all';
   static const String menus = '/Menus';
