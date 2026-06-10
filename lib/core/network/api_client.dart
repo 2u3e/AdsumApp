@@ -12,9 +12,12 @@ final logger = Logger(
 );
 
 /// API base URL - gelistirme ortamina gore degistir
-/// Android emulator icin: https://10.0.2.2:7196
-/// Gercek cihaz/production icin: https://api.adsum.gov
-const String _devBaseUrl = 'https://10.0.2.2:7196';
+/// VPS (emulator + gercek cihaz + web hepsi erisir): http://187.127.72.4:5000
+/// Lokal backend + Android emulator icin: http://10.0.2.2:5000
+/// Production icin: https://api.adsum.gov
+/// Not: HTTP (cleartext) kullanildigindan AndroidManifest'te
+/// android:usesCleartextTraffic="true" gereklidir.
+const String _devBaseUrl = 'http://187.127.72.4:5000';
 
 /// Ana Dio HTTP client provider'i
 /// Tum uygulama bu tek instance'i kullanir
