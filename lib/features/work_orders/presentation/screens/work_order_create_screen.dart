@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -260,18 +262,13 @@ class _WorkOrderCreateScreenState extends ConsumerState<WorkOrderCreateScreen> {
 
               AppSpacing.verticalXl,
 
-              // Kaydet butonu
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton.icon(
-                  onPressed: _submitForm,
-                  icon: const Icon(Icons.save_rounded),
-                  label: const Text('İş Emri Oluştur', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                ),
-              ),
+              // Kaydet butonu — gradient (login/dashboard dili)
+              _SubmitButton(onTap: _submitForm),
               const SizedBox(height: 40),
-            ],
+            ]
+                .animate(interval: 40.ms)
+                .fadeIn(duration: 300.ms, curve: Curves.easeOut)
+                .slideY(begin: 0.06, end: 0, duration: 300.ms, curve: Curves.easeOut),
           ),
         ),
       ),
@@ -344,5 +341,66 @@ class _WorkOrderCreateScreenState extends ConsumerState<WorkOrderCreateScreen> {
       );
       Navigator.pop(context);
     }
+  }
+}
+
+/// Gradient kaydet butonu — basisa tepki veren
+class _SubmitButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _SubmitButton({required this.onTap});
+
+  @override
+  State<_SubmitButton> createState() => _SubmitButtonState();
+}
+
+class _SubmitButtonState extends State<_SubmitButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Container(
+          width: double.infinity,
+          height: 54,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: _pressed ? 0.22 : 0.34),
+                blurRadius: _pressed ? 10 : 16,
+                offset: Offset(0, _pressed ? 4 : 7),
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.save_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('İş Emri Oluştur',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
