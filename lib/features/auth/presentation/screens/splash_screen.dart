@@ -47,18 +47,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     Future.delayed(const Duration(seconds: 2), _checkAuth);
   }
 
+  int _authCheckAttempts = 0;
+
   Future<void> _checkAuth() async {
     if (!mounted) return;
     final authState = ref.read(authStateProvider);
     authState.when(
       data: (state) {
-        if (state.isAuthenticated) {
-          context.go(RoutePaths.home);
+        context.go(state.isAuthenticated ? RoutePaths.home : RoutePaths.login);
+      },
+      // Auth durumu hazir degilse saniyede bir tekrar dene; ama asla sonsuza
+      // kadar bekleme — en fazla ~8 sn sonra login'e dus, splash kilitlenmesin.
+      loading: () {
+        if (_authCheckAttempts++ < 8) {
+          Future.delayed(const Duration(seconds: 1), _checkAuth);
         } else {
           context.go(RoutePaths.login);
         }
       },
-      loading: () => Future.delayed(const Duration(seconds: 1), _checkAuth),
       error: (_, _) => context.go(RoutePaths.login),
     );
   }

@@ -53,16 +53,24 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     _storage = ref.read(secureStorageProvider);
     _authDatasource = AuthRemoteDatasource(ref.read(apiClientProvider));
 
-    // Mevcut token'lari kontrol et
-    final token = await _storage.read(StorageKeys.accessToken);
-    if (token != null) {
-      try {
+    // Mevcut token'lari kontrol et.
+    // Guvenli depo (secure_storage) okumasi bazi cihaz/ortamda ilk keystore
+    // baslatmasinda takilabiliyor; zaman asimi koymazsak build() future'i
+    // hic tamamlanmaz ve uygulama splash ekraninda sonsuza dek kilitlenir.
+    // Takilirsa/hata verirse oturum acilmamis kabul edilir.
+    try {
+      final token = await _storage
+          .read(StorageKeys.accessToken)
+          .timeout(const Duration(seconds: 4));
+      if (token != null) {
         final user = _parseUserFromToken(token);
         _scheduleTokenRefresh();
         return AuthState(isAuthenticated: true, user: user);
-      } catch (_) {
-        await _clearTokens();
       }
+    } catch (_) {
+      try {
+        await _clearTokens().timeout(const Duration(seconds: 4));
+      } catch (_) {}
     }
 
     return const AuthState(isAuthenticated: false);
