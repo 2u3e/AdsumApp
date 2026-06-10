@@ -217,6 +217,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             letterSpacing: 0.5,
                           ),
                     ),
+                    const SizedBox(height: 12),
+
+                    // Sürüm rozeti — güncel build doğrulaması için (geçici test etiketi)
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Sürüm 1.0.1 · VPS API',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
