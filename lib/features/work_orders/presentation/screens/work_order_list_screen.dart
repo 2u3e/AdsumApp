@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -130,6 +131,7 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final reduce = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final orders = _filteredOrders;
 
     return Scaffold(
@@ -245,6 +247,21 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
               ),
             ),
 
+            // Hizli durum filtre seridi
+            _StatusStrip(
+              selected: _selectedStatuses,
+              isDark: isDark,
+              onSelect: (s) => setState(() {
+                if (s == null) {
+                  _selectedStatuses = {};
+                } else if (_selectedStatuses.length == 1 && _selectedStatuses.contains(s)) {
+                  _selectedStatuses = {};
+                } else {
+                  _selectedStatuses = {s};
+                }
+              }),
+            ),
+
             // Liste
             Expanded(
               child: RefreshIndicator(
@@ -252,11 +269,11 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                 child: orders.isEmpty
                     ? _buildEmpty(context, isDark)
                     : ListView.builder(
-                        padding: const EdgeInsets.only(left: 12, right: 12, top: 12, bottom: 20),
+                        padding: const EdgeInsets.only(left: 12, right: 12, top: 8, bottom: 20),
                         itemCount: orders.length,
                         itemBuilder: (context, index) {
                           final order = orders[index];
-                          return Dismissible(
+                          final card = Dismissible(
                             key: Key(order.id),
                             direction: DismissDirection.endToStart,
                             confirmDismiss: (_) async {
@@ -279,6 +296,16 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                               onLongPress: () { HapticFeedback.mediumImpact(); _showQuickActions(context, order); },
                             ),
                           );
+                          if (reduce) return card;
+                          // Ilk birkac kart icin kademeli giris (scroll'da uzamasin)
+                          return card
+                              .animate()
+                              .fadeIn(
+                                duration: 280.ms,
+                                delay: (35 * (index.clamp(0, 9))).ms,
+                                curve: Curves.easeOut,
+                              )
+                              .slideY(begin: 0.06, end: 0, duration: 280.ms, curve: Curves.easeOut);
                         },
                       ),
               ),
@@ -828,6 +855,83 @@ class _WorkCardState extends State<_WorkCard> {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Hizli durum filtre seridi — yatay kaydirilabilir, sayilarla
+class _StatusStrip extends StatelessWidget {
+  final Set<WorkStatus> selected;
+  final bool isDark;
+  final void Function(WorkStatus?) onSelect; // null = Tumu
+
+  const _StatusStrip({required this.selected, required this.isDark, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    const shown = [
+      WorkStatus.inProgress,
+      WorkStatus.inTransit,
+      WorkStatus.onHold,
+      WorkStatus.pending,
+      WorkStatus.completed,
+    ];
+    final counts = {for (final s in shown) s: mockWorkOrders.where((o) => o.status == s).length};
+
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(20, 8, 12, 0),
+        children: [
+          _chip(label: 'Tümü', count: mockWorkOrders.length, color: AppColors.primary, active: selected.isEmpty, onTap: () => onSelect(null)),
+          for (final s in shown)
+            if (counts[s]! > 0)
+              _chip(label: s.label, count: counts[s]!, color: s.color, active: selected.contains(s), onTap: () => onSelect(s)),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip({
+    required String label,
+    required int count,
+    required Color color,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+          decoration: BoxDecoration(
+            color: active ? color.withValues(alpha: isDark ? 0.22 : 0.12) : (isDark ? AppColors.gray800 : AppColors.gray100),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: active ? color.withValues(alpha: 0.5) : Colors.transparent, width: 1.2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+              Text(label, style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                color: active ? color : (isDark ? AppColors.textSecondaryDark : AppColors.textPrimaryLight),
+              )),
+              const SizedBox(width: 5),
+              Text('$count', style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: active ? color : (isDark ? AppColors.gray500 : AppColors.gray400),
+              )),
+            ],
           ),
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -27,11 +28,33 @@ class WorkOrderDetailScreen extends ConsumerWidget {
         slivers: [
           // AppBar
           SliverAppBar(
-            expandedHeight: 140,
+            expandedHeight: 150,
             pinned: true,
             backgroundColor: order.status.color,
             foregroundColor: Colors.white,
             flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color.lerp(order.status.color, Colors.white, 0.12)!,
+                      order.status.color,
+                      Color.lerp(order.status.color, Colors.black, 0.28)!,
+                    ],
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -24,
+                      bottom: -10,
+                      child: Icon(order.status.icon, size: 150, color: Colors.white.withValues(alpha: 0.10)),
+                    ),
+                  ],
+                ),
+              ),
               titlePadding: const EdgeInsets.only(left: 56, bottom: 16, right: 16),
               title: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -98,11 +121,16 @@ class WorkOrderDetailScreen extends ConsumerWidget {
                     AppSpacing.verticalXs,
                     ClipRRect(
                       borderRadius: AppSpacing.borderRadiusFull,
-                      child: LinearProgressIndicator(
-                        value: order.completionPercentage / 100,
-                        minHeight: 8,
-                        backgroundColor: isDark ? AppColors.gray700 : AppColors.gray200,
-                        color: order.status.color,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: order.completionPercentage / 100),
+                        duration: const Duration(milliseconds: 850),
+                        curve: Curves.easeOutCubic,
+                        builder: (_, v, _) => LinearProgressIndicator(
+                          value: v,
+                          minHeight: 8,
+                          backgroundColor: isDark ? AppColors.gray700 : AppColors.gray200,
+                          color: order.status.color,
+                        ),
                       ),
                     ),
                     AppSpacing.verticalLg,
@@ -204,7 +232,10 @@ class WorkOrderDetailScreen extends ConsumerWidget {
                   )),
 
                   const SizedBox(height: 100),
-                ],
+                ]
+                    .animate(interval: 45.ms)
+                    .fadeIn(duration: 300.ms, curve: Curves.easeOut)
+                    .slideY(begin: 0.08, end: 0, duration: 300.ms, curve: Curves.easeOut),
               ),
             ),
           ),
