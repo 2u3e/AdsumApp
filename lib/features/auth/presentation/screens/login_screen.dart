@@ -228,7 +228,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          'Sürüm 1.0.1 · VPS API',
+                          'Sürüm 1.0.2 · VPS API',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
