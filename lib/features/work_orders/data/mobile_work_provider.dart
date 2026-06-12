@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/providers/active_org_provider.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 import '../domain/entities/mobile_work.dart';
 import 'mobile_menu_provider.dart';
@@ -47,21 +48,21 @@ final assignedWorksProvider = FutureProvider<List<MobileWork>>((ref) async {
   return results;
 });
 
-/// Sayfa B — "Birim Isleri": yetkili birimlerde bekleyen (atama durumundaki) isler.
-/// "Birim Isleri" yetkisi varsa doldurulur.
+/// Sayfa B — "Birim Isleri": AKTIF birimde (ve alt birimlerinde) bekleyen işler.
+/// Web is listesiyle birebir ayni kapsami kullanmak icin mevcut /Work/all
+/// endpoint'i, web'in kullandigi `X-Active-Organization-Id` header'i ile cagrilir
+/// (scope = aktif birim + descendants). stepStatusId=1230001 (AtamaDurumunda) ile
+/// yalniz dagitim bekleyen/atanmamis isler suzulur. "Birim Isleri" yetkisi gerekir.
 final unitWorksProvider = FutureProvider<List<MobileWork>>((ref) async {
   final dio = ref.read(apiClientProvider);
-  final user = ref.watch(authStateProvider.select((s) => s.value?.user));
-  if (user == null) return const [];
-
   final canUnit = ref.watch(canSeeUnitWorksProvider);
-  if (!canUnit) return const [];
+  final orgId = ref.watch(activeOrganizationProvider);
+  if (!canUnit || orgId == null) return const [];
 
-  final unitIds = user.units.map((m) => m.organizationId).toList();
-  if (unitIds.isEmpty) return const [];
-
-  final r = await dio.get(ApiConstants.mobileUnitPending,
-      queryParameters: {'organizationIds': unitIds, 'pageSize': 100},
-      options: Options(listFormat: ListFormat.multiCompatible));
+  final r = await dio.get(
+    ApiConstants.works, // '/Work/all'
+    queryParameters: {'stepStatusId': 1230001, 'pageSize': 100},
+    options: Options(headers: {'X-Active-Organization-Id': orgId}),
+  );
   return _parseList(r.data, MobileWorkScope.unit);
 });

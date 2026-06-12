@@ -9,100 +9,48 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/share_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../work_orders/data/mock_work_orders.dart';
-import '../../../work_orders/domain/entities/work_enums.dart';
-import '../../../work_orders/domain/entities/work_order.dart';
+import '../../../work_orders/data/mobile_menu_provider.dart';
+import '../../../work_orders/data/mobile_stats_provider.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final GlobalKey _heroCardKey = GlobalKey();
-  bool _isSharing = false;
-
-  Future<void> _shareReport() async {
-    if (_isSharing) return;
-    setState(() => _isSharing = true);
-    HapticFeedback.lightImpact();
-    try {
-      final boundary =
-          _heroCardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) {
-        setState(() => _isSharing = false);
-        return;
-      }
-      await Future.delayed(const Duration(milliseconds: 50));
-      const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
-      final now = DateTime.now();
-      final dateStr = '${now.day} ${months[now.month - 1]} ${now.year}';
-      await ShareService.captureAndShare(
-        boundary,
-        text: 'ADSUM İş Emri Raporu - $dateStr',
-        subject: 'ADSUM Rapor',
-        fileName: 'adsum_rapor',
-      );
-    } finally {
-      if (mounted) setState(() => _isSharing = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final reduce = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    final stats = DashboardStats.fromWorkOrders(mockWorkOrders);
-    final userName = ref.watch(authStateProvider).value?.user?.firstName ?? 'Yönetici';
-    final recent = mockWorkOrders.take(4).toList();
+    final userName = ref.watch(authStateProvider.select((s) => s.value?.user?.firstName)) ?? 'Yönetici';
+    final canUnit = ref.watch(canSeeUnitWorksProvider);
+
+    // Rapor kartları: Ekip / Bana / Birim
+    final cards = <_CardSpec>[
+      _CardSpec(ReportScope.team, 'Ekip İşleri', const [Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF8B5CF6)]),
+      _CardSpec(ReportScope.personal, 'Bana Atanan', const [Color(0xFF1E3A8A), Color(0xFF2563EB), Color(0xFF3B82F6)]),
+      if (canUnit)
+        _CardSpec(ReportScope.unit, 'Birim İşleri', const [Color(0xFF0E7490), Color(0xFF0891B2), Color(0xFF06B6D4)]),
+    ];
 
     final blocks = <Widget>[
       _Header(
         userName: userName,
         isDark: isDark,
-        isSharing: _isSharing,
-        onShare: _shareReport,
-        onBell: () => StatefulNavigationShell.of(context).goBranch(2),
+        onBell: () => StatefulNavigationShell.of(context).goBranch(3),
       ),
-      const SizedBox(height: 22),
-      RepaintBoundary(
-        key: _heroCardKey,
-        child: _HeroStatsCard(stats: stats, animate: !reduce),
-      ),
-      const SizedBox(height: 22),
-      _StatusDistribution(orders: mockWorkOrders, isDark: isDark),
-      const SizedBox(height: 24),
+      const SizedBox(height: 16),
+      const _PeriodSelector(),
+      const SizedBox(height: 12),
+      _StatCarousel(cards: cards, animate: !reduce),
+      const SizedBox(height: 26),
       _SectionTitle(title: 'Hızlı İşlemler'),
       const SizedBox(height: 12),
-      _QuickActions(),
-      const SizedBox(height: 26),
-      _SectionTitle(
-        title: 'Son İş Emirleri',
-        actionLabel: 'Tümü',
-        onAction: () => StatefulNavigationShell.of(context).goBranch(1),
-      ),
-      const SizedBox(height: 12),
-      ...recent.map((w) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _RecentWorkCard(
-              order: w,
-              isDark: isDark,
-              onTap: () => context.push('/work-orders/${w.id}'),
-            ),
-          )),
-      const SizedBox(height: 14),
+      const _QuickActions(),
+      const SizedBox(height: 18),
       Center(
-        child: Text(
-          'Sürüm ${AppConstants.appVersion}',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiaryLight,
-                letterSpacing: 0.4,
-              ),
-        ),
+        child: Text('Sürüm ${AppConstants.appVersion}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                  letterSpacing: 0.4,
+                )),
       ),
     ];
 
@@ -110,16 +58,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
-          onRefresh: () async => await Future.delayed(const Duration(milliseconds: 700)),
+          onRefresh: () async {
+            for (final s in ReportScope.values) {
+              for (final p in ReportPeriod.values) {
+                ref.invalidate(mobileStatsProvider((s, p)));
+              }
+            }
+            await Future.delayed(const Duration(milliseconds: 400));
+          },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: blocks
-                  .animate(interval: 60.ms)
-                  .fadeIn(duration: 380.ms, curve: Curves.easeOutCubic)
-                  .slideY(begin: reduce ? 0 : 0.12, end: 0, duration: 380.ms, curve: Curves.easeOutCubic),
+                  .animate(interval: 55.ms)
+                  .fadeIn(duration: 360.ms, curve: Curves.easeOutCubic)
+                  .slideY(begin: reduce ? 0 : 0.1, end: 0, duration: 360.ms, curve: Curves.easeOutCubic),
             ),
           ),
         ),
@@ -128,22 +83,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+class _CardSpec {
+  final ReportScope scope;
+  final String title;
+  final List<Color> gradient;
+  _CardSpec(this.scope, this.title, this.gradient);
+}
+
 // ─────────────────────────────────────────────────────────────
-// Header — selamlama + aksiyon ikonlari
+// Header
 // ─────────────────────────────────────────────────────────────
 class _Header extends StatelessWidget {
   final String userName;
   final bool isDark;
-  final bool isSharing;
-  final VoidCallback onShare;
   final VoidCallback onBell;
-  const _Header({
-    required this.userName,
-    required this.isDark,
-    required this.isSharing,
-    required this.onShare,
-    required this.onBell,
-  });
+  const _Header({required this.userName, required this.isDark, required this.onBell});
 
   String get _greeting {
     final h = DateTime.now().hour;
@@ -169,36 +123,18 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _dateLine,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                      letterSpacing: 0.3,
-                    ),
-              ),
+              Text(_dateLine,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+                        letterSpacing: 0.3,
+                      )),
               const SizedBox(height: 3),
-              Text(
-                '$_greeting, $userName',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
+              Text('$_greeting, $userName',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
             ],
           ),
         ),
-        _IconBtn(
-          icon: Icons.ios_share_rounded,
-          isDark: isDark,
-          loading: isSharing,
-          onTap: onShare,
-        ),
-        const SizedBox(width: 10),
-        _IconBtn(
-          icon: Icons.notifications_outlined,
-          isDark: isDark,
-          badge: true,
-          onTap: onBell,
-        ),
+        _IconBtn(icon: Icons.notifications_outlined, isDark: isDark, badge: true, onTap: onBell),
       ],
     );
   }
@@ -207,16 +143,9 @@ class _Header extends StatelessWidget {
 class _IconBtn extends StatelessWidget {
   final IconData icon;
   final bool isDark;
-  final bool loading;
   final bool badge;
   final VoidCallback onTap;
-  const _IconBtn({
-    required this.icon,
-    required this.isDark,
-    this.loading = false,
-    this.badge = false,
-    required this.onTap,
-  });
+  const _IconBtn({required this.icon, required this.isDark, this.badge = false, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -229,142 +158,315 @@ class _IconBtn extends StatelessWidget {
           color: isDark ? AppColors.gray800 : AppColors.gray100,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: loading
-            ? Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: isDark ? AppColors.gray300 : AppColors.gray600,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(icon, size: 21, color: isDark ? AppColors.gray300 : AppColors.gray600),
+            if (badge)
+              Positioned(
+                right: 11,
+                top: 10,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: isDark ? AppColors.gray800 : AppColors.gray100, width: 1.5),
                   ),
                 ),
-              )
-            : Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(icon, size: 21, color: isDark ? AppColors.gray300 : AppColors.gray600),
-                  if (badge)
-                    Positioned(
-                      right: 11,
-                      top: 10,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isDark ? AppColors.gray800 : AppColors.gray100,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
               ),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// Hero stats kart — count-up + derin gradient
+// Dönem seçici (Günlük / Haftalık / Aylık)
 // ─────────────────────────────────────────────────────────────
-class _HeroStatsCard extends StatelessWidget {
-  final DashboardStats stats;
-  final bool animate;
-  const _HeroStatsCard({required this.stats, required this.animate});
+class _PeriodSelector extends ConsumerWidget {
+  const _PeriodSelector();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final period = ref.watch(reportPeriodProvider);
+    final fill = isDark ? AppColors.gray800 : AppColors.gray100;
+
     return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB), Color(0xFF3B82F6)],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.32),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Stack(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(12)),
+      child: Row(
         children: [
-          // Kose parlamasi
-          Positioned(
-            top: -40,
-            right: -30,
-            child: Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Colors.white.withValues(alpha: 0.14), Colors.white.withValues(alpha: 0)],
+          for (final p in ReportPeriod.values)
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(reportPeriodProvider.notifier).state = p;
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: p == period ? (isDark ? AppColors.cardDark : Colors.white) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: p == period
+                        ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))]
+                        : null,
+                  ),
+                  child: Text(
+                    p.label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: p == period ? AppColors.primary : (isDark ? AppColors.gray400 : AppColors.gray500),
+                    ),
+                  ),
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Kaydırmalı rapor kartları
+// ─────────────────────────────────────────────────────────────
+class _StatCarousel extends StatefulWidget {
+  final List<_CardSpec> cards;
+  final bool animate;
+  const _StatCarousel({required this.cards, required this.animate});
+
+  @override
+  State<_StatCarousel> createState() => _StatCarouselState();
+}
+
+class _StatCarouselState extends State<_StatCarousel> {
+  final _controller = PageController(viewportFraction: 0.94);
+  int _page = 0;
+  late List<GlobalKey> _keys;
+
+  @override
+  void initState() {
+    super.initState();
+    _keys = List.generate(widget.cards.length, (_) => GlobalKey());
+  }
+
+  @override
+  void didUpdateWidget(covariant _StatCarousel old) {
+    super.didUpdateWidget(old);
+    if (old.cards.length != widget.cards.length) {
+      _keys = List.generate(widget.cards.length, (_) => GlobalKey());
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _share(int i) async {
+    final ctx = _keys[i].currentContext;
+    final boundary = ctx?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) return;
+    HapticFeedback.lightImpact();
+    await ShareService.captureAndShare(boundary,
+        subject: '${widget.cards[i].title} Raporu', fileName: 'adsum_rapor');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 186,
+          child: PageView.builder(
+            controller: _controller,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemCount: widget.cards.length,
+            itemBuilder: (_, i) => Padding(
+              padding: EdgeInsets.only(right: i == widget.cards.length - 1 ? 0 : 10),
+              child: Stack(
+                children: [
+                  RepaintBoundary(
+                    key: _keys[i],
+                    child: _StatCard(spec: widget.cards[i], animate: widget.animate),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 12,
+                    child: _ShareBtn(onTap: () => _share(i)),
+                  ),
+                ],
+              ),
+            ),
           ),
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
-                child: Row(
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < widget.cards.length; i++)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == _page ? 22 : 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: i == _page ? AppColors.primary : AppColors.gray300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ShareBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ShareBtn({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.18),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.all(7),
+          child: Icon(Icons.ios_share_rounded, color: Colors.white, size: 17),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatCard extends ConsumerWidget {
+  final _CardSpec spec;
+  final bool animate;
+  const _StatCard({required this.spec, required this.animate});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final period = ref.watch(reportPeriodProvider);
+    final async = ref.watch(mobileStatsProvider((spec.scope, period)));
+    final stats = async.valueOrNull ?? const MobileStats();
+    final loading = async.isLoading && !async.hasValue;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: spec.gradient),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [BoxShadow(color: spec.gradient[1].withValues(alpha: 0.34), blurRadius: 22, offset: const Offset(0, 10))],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: -30,
+            right: -20,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(colors: [Colors.white.withValues(alpha: 0.14), Colors.white.withValues(alpha: 0)]),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: _HeadlineStat(
-                        label: 'Toplam Açık İş Emri',
-                        value: stats.totalCount,
-                        valueColor: Colors.white,
-                        valueSize: 46,
-                        animate: animate,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(spec.title,
+                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 2),
+                          Text('Toplam bekleyen',
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
+                        ],
                       ),
                     ),
-                    _HeadlineStat(
-                      label: 'Tamamlanan',
-                      value: stats.completedCount,
-                      valueColor: const Color(0xFF6EE7B7),
-                      valueSize: 36,
-                      alignEnd: true,
-                      animate: animate,
-                    ),
+                    const SizedBox(width: 40), // paylaş butonuna yer
+                    loading
+                        ? const Padding(
+                            padding: EdgeInsets.only(top: 6, right: 8),
+                            child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white)),
+                          )
+                        : _CountUp(
+                            value: stats.total,
+                            animate: animate,
+                            style: const TextStyle(color: Colors.white, fontSize: 42, fontWeight: FontWeight.w800, height: 1),
+                          ),
                   ],
                 ),
-              ),
-              Container(
-                height: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 18),
-                color: Colors.white.withValues(alpha: 0.16),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-                child: Row(
+                const Spacer(),
+                Container(height: 1, color: Colors.white.withValues(alpha: 0.16)),
+                const SizedBox(height: 12),
+                Row(
                   children: [
-                    _StatTile(label: 'Dünden', value: stats.yesterdayCount, valueColor: Colors.white, animate: animate),
+                    _Sub(label: 'Devreden', value: stats.carriedOver, animate: animate),
                     _miniDivider(),
-                    _StatTile(label: 'Bugün', value: stats.todayCount, valueColor: Colors.white, animate: animate),
+                    _Sub(label: 'Gelen', value: stats.arrived, animate: animate),
                     _miniDivider(),
-                    _StatTile(label: 'Devam Eden', value: stats.inProgressCount, valueColor: const Color(0xFFFCD34D), animate: animate),
+                    _Sub(label: 'Devam', value: stats.inProgress, animate: animate),
+                    _miniDivider(),
+                    _Sub(label: 'Tamamlanan', value: stats.completed, animate: animate),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _miniDivider() => Container(width: 1, height: 36, color: Colors.white.withValues(alpha: 0.15));
+  Widget _miniDivider() => Container(width: 1, height: 30, color: Colors.white.withValues(alpha: 0.15));
 }
 
-/// 0'dan hedefe sayan animasyonlu rakam
+class _Sub extends StatelessWidget {
+  final String label;
+  final int value;
+  final bool animate;
+  const _Sub({required this.label, required this.value, required this.animate});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          _CountUp(value: value, animate: animate,
+              style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800, height: 1)),
+          const SizedBox(height: 4),
+          Text(label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 10.5, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+}
+
 class _CountUp extends StatelessWidget {
   final int value;
   final TextStyle style;
@@ -376,226 +478,39 @@ class _CountUp extends StatelessWidget {
     if (!animate) return Text('$value', style: style);
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: value.toDouble()),
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 700),
       curve: Curves.easeOutCubic,
       builder: (_, v, _) => Text('${v.round()}', style: style),
     );
   }
 }
 
-class _HeadlineStat extends StatelessWidget {
-  final String label;
-  final int value;
-  final Color valueColor;
-  final double valueSize;
-  final bool alignEnd;
-  final bool animate;
-  const _HeadlineStat({
-    required this.label,
-    required this.value,
-    required this.valueColor,
-    required this.valueSize,
-    this.alignEnd = false,
-    required this.animate,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.85),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _CountUp(
-              value: value,
-              animate: animate,
-              style: TextStyle(color: valueColor, fontSize: valueSize, fontWeight: FontWeight.w800, height: 1),
-            ),
-            const SizedBox(width: 5),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('adet', style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12)),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  final String label;
-  final int value;
-  final Color valueColor;
-  final bool animate;
-  const _StatTile({required this.label, required this.value, required this.valueColor, required this.animate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          _CountUp(
-            value: value,
-            animate: animate,
-            style: TextStyle(color: valueColor, fontSize: 24, fontWeight: FontWeight.w800, height: 1),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11.5, fontWeight: FontWeight.w500, letterSpacing: 0.2),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────────────────
-// Durum dagilimi — segment bar + legend
-// ─────────────────────────────────────────────────────────────
-class _StatusDistribution extends StatelessWidget {
-  final List<WorkOrder> orders;
-  final bool isDark;
-  const _StatusDistribution({required this.orders, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    const shown = [
-      WorkStatus.pending,
-      WorkStatus.inTransit,
-      WorkStatus.inProgress,
-      WorkStatus.onHold,
-      WorkStatus.completed,
-    ];
-    final counts = {for (final s in shown) s: orders.where((o) => o.status == s).length};
-    final total = counts.values.fold<int>(0, (a, b) => a + b);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.gray200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('Durum Dağılımı', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              const Spacer(),
-              Text('$total iş emri',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Segment bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Row(
-              children: [
-                for (final s in shown)
-                  if (counts[s]! > 0)
-                    Expanded(
-                      flex: counts[s]!,
-                      child: Container(
-                        height: 10,
-                        margin: const EdgeInsets.only(right: 2),
-                        color: s.color,
-                      ),
-                    ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          // Legend
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            children: [
-              for (final s in shown)
-                if (counts[s]! > 0)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(width: 9, height: 9, decoration: BoxDecoration(color: s.color, shape: BoxShape.circle)),
-                      const SizedBox(width: 6),
-                      Text(s.label,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
-                      const SizedBox(width: 4),
-                      Text('${counts[s]}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
-                    ],
-                  ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Bolum basligi
+// Bölüm başlığı + hızlı işlemler
 // ─────────────────────────────────────────────────────────────
 class _SectionTitle extends StatelessWidget {
   final String title;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-  const _SectionTitle({required this.title, this.actionLabel, this.onAction});
+  const _SectionTitle({required this.title});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-        if (actionLabel != null)
-          GestureDetector(
-            onTap: onAction,
-            child: Row(
-              children: [
-                Text(actionLabel!,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColors.primary, fontWeight: FontWeight.w600)),
-                const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.primary),
-              ],
-            ),
-          ),
-      ],
-    );
+    return Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700));
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Hizli islemler
-// ─────────────────────────────────────────────────────────────
 class _QuickActions extends StatelessWidget {
+  const _QuickActions();
+
   @override
   Widget build(BuildContext context) {
     final items = [
-      (_AQ(Icons.add_circle_outline_rounded, 'Yeni İş Emri', [const Color(0xFF3B82F6), const Color(0xFF2563EB)],
-          () => context.push('/work-orders/create'))),
-      (_AQ(Icons.assignment_outlined, 'İş Emirleri', [const Color(0xFF8B5CF6), const Color(0xFF6D28D9)],
-          () => StatefulNavigationShell.of(context).goBranch(1))),
-      (_AQ(Icons.map_outlined, 'Harita', [const Color(0xFF10B981), const Color(0xFF059669)], () {})),
-      (_AQ(Icons.notifications_none_rounded, 'Bildirimler', [const Color(0xFFF59E0B), const Color(0xFFD97706)],
-          () => StatefulNavigationShell.of(context).goBranch(2))),
+      _AQ(Icons.add_circle_outline_rounded, 'Yeni İş', [const Color(0xFF3B82F6), const Color(0xFF2563EB)],
+          () => context.push('/work-orders/create')),
+      _AQ(Icons.assignment_outlined, 'Atanan', [const Color(0xFF8B5CF6), const Color(0xFF6D28D9)],
+          () => StatefulNavigationShell.of(context).goBranch(1)),
+      _AQ(Icons.map_outlined, 'Harita', [const Color(0xFF10B981), const Color(0xFF059669)], () {}),
+      _AQ(Icons.notifications_none_rounded, 'Bildirim', [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+          () => StatefulNavigationShell.of(context).goBranch(3)),
     ];
     return Row(
       children: [
@@ -630,6 +545,7 @@ class _ActionCardState extends State<_ActionCard> {
   @override
   Widget build(BuildContext context) {
     final it = widget.item;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapCancel: () => setState(() => _pressed = false),
@@ -645,11 +561,9 @@ class _ActionCardState extends State<_ActionCard> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark ? AppColors.cardDark : Colors.white,
+            color: isDark ? AppColors.cardDark : Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Theme.of(context).brightness == Brightness.dark ? AppColors.borderDark : AppColors.gray200,
-            ),
+            border: Border.all(color: isDark ? AppColors.borderDark : AppColors.gray200),
           ),
           child: Column(
             children: [
@@ -659,133 +573,19 @@ class _ActionCardState extends State<_ActionCard> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: it.gradient),
                   borderRadius: BorderRadius.circular(13),
-                  boxShadow: [
-                    BoxShadow(color: it.gradient.first.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3)),
-                  ],
+                  boxShadow: [BoxShadow(color: it.gradient.first.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))],
                 ),
                 child: Icon(it.icon, color: Colors.white, size: 22),
               ),
               const SizedBox(height: 8),
-              Text(
-                it.label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
-              ),
+              Text(it.label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600)),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Son is emri karti
-// ─────────────────────────────────────────────────────────────
-class _RecentWorkCard extends StatelessWidget {
-  final WorkOrder order;
-  final bool isDark;
-  final VoidCallback onTap;
-  const _RecentWorkCard({required this.order, required this.isDark, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isDark ? AppColors.borderDark : AppColors.gray200),
-        ),
-        child: Row(
-          children: [
-            // Durum ikonlu sekme
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: order.status.color.withValues(alpha: isDark ? 0.18 : 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(order.status.icon, color: order.status.color, size: 22),
-            ),
-            const SizedBox(width: 12),
-            // Orta
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          order.workTypeName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      if (order.priority.value >= WorkPriority.high.value) ...[
-                        Icon(order.priority.icon, size: 14, color: order.priority.color),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Icon(Icons.place_outlined, size: 13, color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          '${order.neighborhood}, ${order.district}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _StatusChip(status: order.status),
-                      const Spacer(),
-                      Text(order.workNumber,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                              fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final WorkStatus status;
-  const _StatusChip({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: status.color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(color: status.color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

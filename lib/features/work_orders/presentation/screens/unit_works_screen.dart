@@ -1,41 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../../data/mobile_work_provider.dart';
-import '../widgets/mobile_work_card.dart';
-import 'work_state_views.dart';
+import '../widgets/work_list_body.dart';
 
-/// Sayfa B gövdesi — "Birim İşleri". Kullanıcının yetkili olduğu birimlerde bekleyen
-/// (atama durumundaki) işler. Yetki kontrolü [WorksTabsScreen] sekme görünürlüğüyle
-/// yapılır; bu görünüm doğrudan veriyi listeler.
+/// "Birim İşleri" sayfası — aktif birimde ve alt birimlerinde bekleyen
+/// (atama durumundaki) işler. Başlık satırı WorkListBody içindedir.
+class UnitWorksScreen extends StatelessWidget {
+  const UnitWorksScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.gray50,
+      body: const SafeArea(child: UnitWorksView()),
+    );
+  }
+}
+
+/// Liste gövdesi (shell'siz).
 class UnitWorksView extends ConsumerWidget {
   const UnitWorksView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncWorks = ref.watch(unitWorksProvider);
-
-    return RefreshIndicator(
+    return WorkListBody(
+      works: ref.watch(unitWorksProvider),
       onRefresh: () async => ref.invalidate(unitWorksProvider),
-      child: asyncWorks.when(
-        loading: () => const WorkLoadingView(),
-        error: (e, _) => WorkErrorView(onRetry: () => ref.invalidate(unitWorksProvider)),
-        data: (works) {
-          if (works.isEmpty) {
-            return const WorkEmptyView(
-              icon: Icons.inbox_outlined,
-              title: 'Bekleyen iş yok',
-              message: 'Birimlerinizde dağıtım bekleyen iş bulunmuyor.',
-            );
-          }
-          return ListView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            itemCount: works.length,
-            itemBuilder: (_, i) => MobileWorkCard(work: works[i]),
-          );
-        },
-      ),
+      emptyTitle: 'Bekleyen iş yok',
+      emptyMessage: 'Birimlerinizde dağıtım bekleyen iş bulunmuyor.',
     );
   }
 }

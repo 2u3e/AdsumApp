@@ -20,6 +20,12 @@ class ApiConstants {
   static const String mobileAssignedToMe = '/Work/mobile/assigned-to-me'; // ?employeeId=
   static const String mobileTeamWorks = '/Work/mobile/team'; // ?organizationIds=
   static const String mobileUnitPending = '/Work/mobile/unit-pending'; // ?organizationIds=
+  static const String mobileStats = '/Work/mobile/stats'; // ?employeeId=|organizationIds=|useActiveOrgScope= &period=
+
+  // Harita / OSRM (araç rotası) — on-prem proxy
+  static const String mapConfig = '/Map/config'; // OSRM kullanılabilir mi
+  static const String mapRouteMatrix = '/Map/route-matrix'; // ?originLat=&originLng=&destinations=lat,lng;...
+  static const String mapOptimize = '/Map/optimize'; // ?points=lat,lng;...&roundTrip=false
 
   // Work (BMS) endpoints
   static const String works = '/Work/all';

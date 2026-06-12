@@ -20,4 +20,8 @@ class StorageKeys {
   static const String rememberUsername = 'adsum_remember_username';
   static const String rememberedUsername = 'adsum_remembered_username';
   static const String activeOrganizationId = 'adsum_active_org';
+  static const String menuPosition = 'adsum_menu_position';
+  static const String mapBasemap = 'adsum_map_basemap';
+  static const String mapSelfHostUrl = 'adsum_map_selfhost_url';
+  static const String mapOsrmEnabled = 'adsum_map_osrm_enabled';
 }

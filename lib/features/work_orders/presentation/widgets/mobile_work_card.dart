@@ -1,131 +1,160 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../../../core/services/location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/mobile_work.dart';
+import 'work_detail_sheet.dart';
+import 'work_visuals.dart';
 
-/// Mobil is karti — liste satiri. Sayfa A'da scope rozeti (Bana / Ekip) gosterilir.
+/// Mobil iş kartı — kompakt; solda iş adımı renginde accent bar.
+/// Satır1: numara + durum + öncelik + tarih. Dokunulunca detay sheet açılır.
 class MobileWorkCard extends StatelessWidget {
   final MobileWork work;
   final bool showScopeBadge;
-  final VoidCallback? onTap;
-  const MobileWorkCard({
-    super.key,
-    required this.work,
-    this.showScopeBadge = false,
-    this.onTap,
-  });
 
-  Color _priorityColor() {
-    switch (work.priority) {
-      case 5:
-        return const Color(0xFFDC2626);
-      case 4:
-        return const Color(0xFFEA580C);
-      case 3:
-        return const Color(0xFFF59E0B);
-      case 2:
-        return const Color(0xFF10B981);
-      default:
-        return const Color(0xFF6B7280);
-    }
-  }
+  /// Mevcut konuma kuş uçuşu mesafe (metre). Verilirse adres satırında rozet gösterilir.
+  final double? distanceMeters;
+
+  const MobileWorkCard({super.key, required this.work, this.showScopeBadge = false, this.distanceMeters});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = _priorityColor();
+    final accent = stepColorOf(work);
+    final desc = work.cleanDescription;
+    final muted = isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight;
+    final secondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: isDark ? AppColors.borderDark : AppColors.gray200),
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Sol oncelik seridi
-              Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: isDark ? AppColors.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            showWorkDetailSheet(context, work);
+          },
+          splashColor: accent.withValues(alpha: 0.07),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: isDark ? AppColors.borderDark : AppColors.gray200),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(width: 3.5, color: accent),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              work.workTypeName.isEmpty ? '(İş tipi yok)' : work.workTypeName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          if (showScopeBadge) _ScopeBadge(scope: work.scope, isDark: isDark),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        work.code,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      if (work.addressSummary.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Icon(Icons.place_outlined,
-                                size: 13, color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight),
-                            const SizedBox(width: 3),
-                            Expanded(
-                              child: Text(
-                                work.addressSummary,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          // Satır 1: numara + durum + öncelik ......... tarih
+                          Row(
+                            children: [
+                              Text(
+                                work.code,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.2,
                                     ),
                               ),
+                              const SizedBox(width: 8),
+                              Container(width: 6, height: 6, decoration: BoxDecoration(color: accent, shape: BoxShape.circle)),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  work.stepStatusName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: false,
+                                  style: TextStyle(color: accent, fontSize: 11.5, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(Icons.flag_rounded, size: 13, color: priorityColor(work.priority)),
+                              const SizedBox(width: 8),
+                              Text(
+                                relativeDate(work.createdAt),
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: muted, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          // Satır 2: iş tipi (+ scope rozeti)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  work.workTypeName.isEmpty ? '(İş tipi yok)' : work.workTypeName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: false,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              if (showScopeBadge) _ScopeBadge(scope: work.scope, isDark: isDark),
+                            ],
+                          ),
+                          if (work.addressSummary.isNotEmpty) ...[
+                            const SizedBox(height: 5),
+                            Row(
+                              children: [
+                                Icon(Icons.location_on_rounded, size: 13, color: muted),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    work.addressSummary,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: false,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: secondary, fontSize: 12),
+                                  ),
+                                ),
+                                if (distanceMeters != null) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: accent.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.near_me_rounded, size: 10, color: accent),
+                                        const SizedBox(width: 3),
+                                        Text(formatDistance(distanceMeters!),
+                                            style: TextStyle(color: accent, fontSize: 10.5, fontWeight: FontWeight.w700)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ],
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _StatusChip(label: work.stepStatusName, isDark: isDark),
-                          const Spacer(),
-                          if (work.primaryAssigneeName?.isNotEmpty == true)
-                            Flexible(
-                              child: Text(
-                                work.primaryAssigneeName!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
-                                    ),
-                              ),
+                          if (desc != null && desc.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              desc,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted, fontSize: 12),
                             ),
+                          ],
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -157,38 +186,12 @@ class _ScopeBadge extends StatelessWidget {
         break;
     }
     return Container(
-      margin: const EdgeInsets.only(left: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: isDark ? 0.2 : 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(
-        label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final String label;
-  final bool isDark;
-  const _StatusChip({required this.label, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    if (label.isEmpty) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w600),
-      ),
+      child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700)),
     );
   }
 }
