@@ -48,7 +48,10 @@ class _WorkMapScreenState extends ConsumerState<WorkMapScreen> {
     final me = _myLatLng;
     final located = _located;
 
-    final center = me ?? (located.isNotEmpty ? LatLng(located.first.latitude!, located.first.longitude!) : _malatya);
+    // Önce işlerin konumuna ortala (emülatör GPS'i alakasız yer döndürebilir); pin'ler hep görünür.
+    final center = located.isNotEmpty
+        ? LatLng(located.first.latitude!, located.first.longitude!)
+        : (me ?? _malatya);
     final nearest = _nearest(me, located);
 
     return Scaffold(
