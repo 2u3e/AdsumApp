@@ -21,11 +21,14 @@ class MapSettings {
 
   const MapSettings({
     this.basemap = BasemapSource.osm,
-    this.selfHostTileUrl = '',
+    this.selfHostTileUrl = defaultSelfHostUrl,
     this.osrmEnabled = false,
   });
 
   static const String _osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+  /// Sunucumuzdaki OSM önbellekli tile proxy (nginx) — varsayılan self-host adresi.
+  static const String defaultSelfHostUrl = 'http://187.127.72.4:8082/{z}/{x}/{y}.png';
 
   /// Aktif tile URL şablonu. Self-host seçili ama URL boşsa OSM'e düşer (B planı).
   String get tileUrl =>
@@ -55,7 +58,7 @@ class MapSettingsNotifier extends Notifier<MapSettings> {
       final prefs = await SharedPreferences.getInstance();
       state = MapSettings(
         basemap: prefs.getString(StorageKeys.mapBasemap) == 'selfHosted' ? BasemapSource.selfHosted : BasemapSource.osm,
-        selfHostTileUrl: prefs.getString(StorageKeys.mapSelfHostUrl) ?? '',
+        selfHostTileUrl: prefs.getString(StorageKeys.mapSelfHostUrl) ?? MapSettings.defaultSelfHostUrl,
         osrmEnabled: prefs.getBool(StorageKeys.mapOsrmEnabled) ?? false,
       );
     } catch (_) {}

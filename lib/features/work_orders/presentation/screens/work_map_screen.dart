@@ -152,36 +152,44 @@ class _WorkMapScreenState extends ConsumerState<WorkMapScreen> {
     final color = stepColorOf(w);
     final isNearest = nearest != null && nearest.id == w.id;
     final selected = _selected?.id == w.id;
+    final highlight = selected || isNearest;
+    final pinColor = isNearest ? AppColors.primary : color;
     return Marker(
+      key: ValueKey('m_${w.id}'),
       point: LatLng(w.latitude!, w.longitude!),
-      width: 40,
-      height: 40,
-      alignment: Alignment.topCenter,
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
       child: GestureDetector(
         onTap: () {
           HapticFeedback.selectionClick();
           setState(() => _selected = w);
         },
-        child: Icon(
-          Icons.location_on,
-          size: selected || isNearest ? 40 : 32,
-          color: isNearest ? AppColors.primary : color,
-          shadows: const [Shadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 1))],
+        child: Container(
+          decoration: BoxDecoration(
+            color: pinColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: highlight ? 3.5 : 2.5),
+          ),
+          // İçte küçük beyaz nokta — seçili/en yakını belirginleştirir (gölge yok → hayalet yok).
+          child: highlight
+              ? const Center(child: Icon(Icons.circle, size: 7, color: Colors.white))
+              : null,
         ),
       ),
     );
   }
 
   Marker _meMarker(LatLng me) => Marker(
+        key: const ValueKey('me'),
         point: me,
-        width: 22,
-        height: 22,
+        width: 20,
+        height: 20,
         child: Container(
           decoration: BoxDecoration(
             color: Colors.blueAccent,
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 3),
-            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
           ),
         ),
       );

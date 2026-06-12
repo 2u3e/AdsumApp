@@ -108,7 +108,10 @@ class _WorkListBodyState extends ConsumerState<WorkListBody> {
     final filtered = _apply(widget.works.valueOrNull ?? const <MobileWork>[])
         .where((w) => w.hasLocation)
         .toList();
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => WorkMapScreen(works: filtered)));
+    // rootNavigator: harita tam ekran açılsın (alt menü/üst kabuk üstünde),
+    // iş detay paneli menünün altında kalmasın.
+    Navigator.of(context, rootNavigator: true)
+        .push(MaterialPageRoute(builder: (_) => WorkMapScreen(works: filtered)));
   }
 
   @override
