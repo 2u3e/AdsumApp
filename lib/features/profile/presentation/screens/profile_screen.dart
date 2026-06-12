@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/map_settings_provider.dart';
+import '../../../../core/services/menu_position_provider.dart';
 import '../../../../core/services/theme_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -28,6 +31,29 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   UserWorkStatus _workStatus = UserWorkStatus.working;
+
+  Future<void> _editSelfHostUrl() async {
+    final ctrl = TextEditingController(text: ref.read(mapSettingsProvider).selfHostTileUrl);
+    final url = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Self-host Tile URL'),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(
+            hintText: 'https://host/.../{z}/{x}/{y}.png',
+            helperText: '{z}/{x}/{y} şablonlu XYZ raster tile adresi',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Kaydet')),
+        ],
+      ),
+    );
+    if (url != null) await ref.read(mapSettingsProvider.notifier).setSelfHostUrl(url);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,6 +209,62 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const Divider(height: 1),
                   ListTile(
+                    leading: const Icon(Icons.dashboard_customize_outlined),
+                    title: const Text('Menü Konumu'),
+                    trailing: SegmentedButton<MenuPosition>(
+                      style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                      segments: const [
+                        ButtonSegment(value: MenuPosition.bottom, icon: Icon(Icons.dock_rounded, size: 18), label: Text('Alt')),
+                        ButtonSegment(value: MenuPosition.left, icon: Icon(Icons.menu_open_rounded, size: 18), label: Text('Sol')),
+                      ],
+                      selected: {ref.watch(menuPositionProvider)},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (s) => ref.read(menuPositionProvider.notifier).setPosition(s.first),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.map_outlined),
+                    title: const Text('Harita Altlığı'),
+                    trailing: SegmentedButton<BasemapSource>(
+                      style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                      segments: const [
+                        ButtonSegment(value: BasemapSource.osm, label: Text('OSM')),
+                        ButtonSegment(value: BasemapSource.selfHosted, label: Text('Sunucu')),
+                      ],
+                      selected: {ref.watch(mapSettingsProvider).basemap},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (s) => ref.read(mapSettingsProvider.notifier).setBasemap(s.first),
+                    ),
+                  ),
+                  if (ref.watch(mapSettingsProvider).basemap == BasemapSource.selfHosted) ...[
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.link_rounded),
+                      title: const Text('Self-host Tile URL'),
+                      subtitle: Text(
+                        ref.watch(mapSettingsProvider).selfHostTileUrl.isEmpty
+                            ? 'Tanımlı değil (OSM kullanılır)'
+                            : ref.watch(mapSettingsProvider).selfHostTileUrl,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: const Icon(Icons.edit_outlined, size: 18),
+                      onTap: _editSelfHostUrl,
+                    ),
+                  ],
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.directions_car_outlined),
+                    title: const Text('Araç Rotası (OSRM)'),
+                    subtitle: const Text('Araçla mesafe + güzergah optimizasyonu'),
+                    trailing: Switch(
+                      value: ref.watch(mapSettingsProvider).osrmEnabled,
+                      onChanged: (v) => ref.read(mapSettingsProvider.notifier).setOsrmEnabled(v),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
                     leading: const Icon(Icons.notifications_outlined),
                     title: const Text('Bildirim Tercihleri'),
                     trailing: const Icon(Icons.chevron_right_rounded),
@@ -190,23 +272,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    leading: const Icon(Icons.language_rounded),
-                    title: const Text('Dil'),
-                    subtitle: const Text('Türkçe'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () {},
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
                     leading: const Icon(Icons.info_outline_rounded),
                     title: const Text('Hakkında'),
-                    subtitle: const Text('ADSUM v1.0.0'),
+                    subtitle: const Text('ADSUM v${AppConstants.appVersion}'),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () {
                       showAboutDialog(
                         context: context,
                         applicationName: 'ADSUM',
-                        applicationVersion: '1.0.0',
+                        applicationVersion: AppConstants.appVersion,
                         applicationLegalese: '2026 Adsum Belediye Yönetim Sistemi',
                       );
                     },

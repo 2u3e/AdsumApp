@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- API erisimi icin internet izni (release build'de gerekli) -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Harita: en yakin is / mesafe icin konum izni -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="adsum_app"
         android:name="${applicationName}"

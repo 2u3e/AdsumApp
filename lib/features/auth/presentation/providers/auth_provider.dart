@@ -63,7 +63,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           .read(StorageKeys.accessToken)
           .timeout(const Duration(seconds: 4));
       if (token != null) {
-        final user = _parseUserFromToken(token);
+        var user = _parseUserFromToken(token);
+        user = await _enrichWithMe(user);
         _scheduleTokenRefresh();
         return AuthState(isAuthenticated: true, user: user);
       }
@@ -82,28 +83,6 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       AuthState(isLoading: true),
     );
 
-    // TODO: API baglantiginda kaldir - test giris modu
-    if (username == 'test' && password == '123456') {
-      await Future.delayed(const Duration(milliseconds: 800));
-      state = AsyncValue.data(
-        AuthState(
-          isAuthenticated: true,
-          user: const User(
-            id: 'test-user-001',
-            userName: 'test',
-            email: 'test@adsum.gov',
-            firstName: 'Test',
-            lastName: 'Kullanıcı',
-            roles: ['Admin'],
-            permissions: ['work.view', 'work.create', 'work.edit'],
-            organizationName: 'Bilgi İşlem Müdürlüğü',
-            departmentName: 'Yazılım Geliştirme',
-          ),
-        ),
-      );
-      return;
-    }
-
     try {
       final response = await _authDatasource.login(
         username: username,
@@ -111,7 +90,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       );
 
       await _saveTokens(response);
-      final user = _parseUserFromToken(response['access_token'] as String);
+      var user = _parseUserFromToken(response['access_token'] as String);
+      user = await _enrichWithMe(user);
       _scheduleTokenRefresh();
 
       state = AsyncValue.data(
@@ -139,6 +119,30 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
     await _clearTokens();
     state = const AsyncValue.data(AuthState(isAuthenticated: false));
+  }
+
+  /// /Auth/me ile token'dan gelen temel kullaniciyi memberships + employeeId ile zenginlestir.
+  /// Me cagrisi basarisiz olursa (ag/oturum) token'dan gelen temel kullaniciyla devam edilir.
+  Future<User> _enrichWithMe(User base) async {
+    try {
+      final me = await _authDatasource.getMe().timeout(const Duration(seconds: 8));
+      final full = User.fromMeJson(me);
+      // Token'dan gelen rolleri koru (me permissions bos donebilir); me memberships/employeeId esastir.
+      return User(
+        id: full.id.isNotEmpty ? full.id : base.id,
+        userName: full.userName.isNotEmpty ? full.userName : base.userName,
+        email: full.email.isNotEmpty ? full.email : base.email,
+        firstName: full.firstName ?? base.firstName,
+        lastName: full.lastName ?? base.lastName,
+        roles: full.roles.isNotEmpty ? full.roles : base.roles,
+        permissions: base.permissions,
+        avatarUrl: full.avatarUrl ?? base.avatarUrl,
+        employeeId: full.employeeId,
+        memberships: full.memberships,
+      );
+    } catch (_) {
+      return base;
+    }
   }
 
   /// JWT token'dan kullanici bilgisi cikart

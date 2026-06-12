@@ -6,6 +6,8 @@ class RouteNames {
   static const String login = 'login';
   static const String shell = 'shell';
   static const String home = 'home';
+  static const String assignedWorks = 'assigned-works';
+  static const String unitWorks = 'unit-works';
   static const String workOrders = 'work-orders';
   static const String workOrderDetail = 'work-order-detail';
   static const String workOrderCreate = 'work-order-create';
@@ -20,6 +22,8 @@ class RoutePaths {
   static const String splash = '/splash';
   static const String login = '/login';
   static const String home = '/home';
+  static const String assignedWorks = '/assigned-works';
+  static const String unitWorks = '/unit-works';
   static const String workOrders = '/work-orders';
   static String workOrderDetail(String id) => '/work-orders/$id';
   static const String workOrderCreate = '/work-orders/create';
