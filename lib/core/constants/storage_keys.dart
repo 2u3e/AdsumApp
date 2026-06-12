@@ -19,4 +19,5 @@ class StorageKeys {
   static const String locale = 'adsum_locale';
   static const String rememberUsername = 'adsum_remember_username';
   static const String rememberedUsername = 'adsum_remembered_username';
+  static const String activeOrganizationId = 'adsum_active_org';
 }

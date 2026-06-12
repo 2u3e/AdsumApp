@@ -5,7 +5,7 @@ class AppConstants {
   static const String appName = 'ADSUM';
   // Her mobil değişiklikten sonra son haneyi +1 artır (login + anasayfa footer
   // bu tek kaynaktan okur). Kod cihaza ulaştı mı doğrulamak için kullanılır.
-  static const String appVersion = '1.0.5';
+  static const String appVersion = '1.0.6';
 
   // Network
   static const Duration connectTimeout = Duration(seconds: 15);

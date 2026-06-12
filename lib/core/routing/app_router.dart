@@ -11,7 +11,7 @@ import '../../features/notifications/presentation/screens/notification_list_scre
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/work_orders/presentation/screens/work_order_create_screen.dart';
 import '../../features/work_orders/presentation/screens/work_order_detail_screen.dart';
-import '../../features/work_orders/presentation/screens/work_order_list_screen.dart';
+import '../../features/work_orders/presentation/screens/works_tabs_screen.dart';
 import '../theme/app_colors.dart';
 import 'route_names.dart';
 
@@ -42,7 +42,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [
             GoRoute(
               path: RoutePaths.workOrders, name: RouteNames.workOrders,
-              builder: (context, state) => const WorkOrderListScreen(),
+              builder: (context, state) => const WorksTabsScreen(),
               routes: [
                 GoRoute(path: 'create', name: RouteNames.workOrderCreate, builder: (context, state) => const WorkOrderCreateScreen()),
                 GoRoute(path: ':id', name: RouteNames.workOrderDetail, builder: (context, state) => WorkOrderDetailScreen(workOrderId: state.pathParameters['id']!)),

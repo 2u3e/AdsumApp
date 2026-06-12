@@ -69,4 +69,15 @@ class AuthRemoteDatasource {
     final response = await _dio.get(ApiConstants.users);
     return response.data as Map<String, dynamic>;
   }
+
+  /// Oturum bilgisi: employeeId + memberships (org + rol + isFieldTeam).
+  /// Response zarfindan (.data) icteki nesneyi dondurur.
+  Future<Map<String, dynamic>> getMe() async {
+    final response = await _dio.get(ApiConstants.authMe);
+    final body = response.data;
+    if (body is Map<String, dynamic> && body['data'] is Map<String, dynamic>) {
+      return body['data'] as Map<String, dynamic>;
+    }
+    return body as Map<String, dynamic>;
+  }
 }
