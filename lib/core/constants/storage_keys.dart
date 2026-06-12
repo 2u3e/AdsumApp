@@ -17,4 +17,6 @@ class StorageKeys {
   static const String hasLoggedInBefore = 'adsum_has_logged_in';
   static const String fcmToken = 'adsum_fcm_token';
   static const String locale = 'adsum_locale';
+  static const String rememberUsername = 'adsum_remember_username';
+  static const String rememberedUsername = 'adsum_remembered_username';
 }

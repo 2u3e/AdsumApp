@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/share_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -91,6 +92,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onTap: () => context.push('/work-orders/${w.id}'),
             ),
           )),
+      const SizedBox(height: 14),
+      Center(
+        child: Text(
+          'Sürüm ${AppConstants.appVersion}',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiaryLight,
+                letterSpacing: 0.4,
+              ),
+        ),
+      ),
     ];
 
     return Scaffold(

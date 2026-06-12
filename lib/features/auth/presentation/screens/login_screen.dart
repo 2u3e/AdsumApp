@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/storage_keys.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
 
@@ -22,6 +25,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _rememberUsername = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberedUsername();
+  }
+
+  /// Hatirlanan kullanici adini yukle ve alani doldur.
+  Future<void> _loadRememberedUsername() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Daha once hic ayar yapilmadiysa varsayilan: hatirla (true).
+      final remember = prefs.getBool(StorageKeys.rememberUsername) ?? true;
+      final saved = prefs.getString(StorageKeys.rememberedUsername);
+      if (!mounted) return;
+      setState(() {
+        _rememberUsername = remember;
+        if (remember && saved != null && saved.isNotEmpty) {
+          _usernameController.text = saved;
+        }
+      });
+    } catch (_) {
+      // Tercih okunamazsa sessizce varsayilanla devam et.
+    }
+  }
+
+  /// Tercihe gore kullanici adini kaydet ya da temizle.
+  Future<void> _persistUsernamePreference(String username) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(StorageKeys.rememberUsername, _rememberUsername);
+      if (_rememberUsername) {
+        await prefs.setString(StorageKeys.rememberedUsername, username);
+      } else {
+        await prefs.remove(StorageKeys.rememberedUsername);
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -35,10 +77,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     HapticFeedback.lightImpact();
     setState(() => _isLoading = true);
+    final username = _usernameController.text.trim();
     await ref.read(authStateProvider.notifier).login(
-          _usernameController.text.trim(),
+          username,
           _passwordController.text,
         );
+    // Yalnizca giris basariliysa kullanici adini hatirla (yanlis kullanici
+    // adini kaydetmemek icin).
+    final authenticated =
+        ref.read(authStateProvider).value?.isAuthenticated ?? false;
+    if (authenticated) {
+      await _persistUsernamePreference(username);
+    } else if (!_rememberUsername) {
+      // Kullanici hatirlamayi kapattiysa, basarisiz giriste de eski kaydi sil.
+      await _persistUsernamePreference(username);
+    }
     if (mounted) setState(() => _isLoading = false);
   }
 
@@ -97,7 +150,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           return null;
         },
       ),
-      const SizedBox(height: 28),
+      const SizedBox(height: 16),
+      _RememberCheckbox(
+        value: _rememberUsername,
+        isDark: isDark,
+        onChanged: (v) => setState(() => _rememberUsername = v),
+      ),
+      const SizedBox(height: 22),
       _PrimaryButton(
         label: 'Giriş Yap',
         loading: _isLoading,
@@ -449,6 +508,69 @@ class _FieldState extends State<_Field> {
 }
 
 // ─────────────────────────────────────────────────────────────
+// "Kullanici adimi hatirla" — animasyonlu custom onay kutusu
+// ─────────────────────────────────────────────────────────────
+class _RememberCheckbox extends StatelessWidget {
+  final bool value;
+  final bool isDark;
+  final ValueChanged<bool> onChanged;
+  const _RememberCheckbox({
+    required this.value,
+    required this.isDark,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.primary;
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onChanged(!value);
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              'Kullanıcı adımı hatırla',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+            const SizedBox(width: 10),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOut,
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: value ? accent : Colors.transparent,
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(
+                  color: value
+                      ? accent
+                      : (isDark ? AppColors.gray500 : AppColors.gray300),
+                  width: 1.6,
+                ),
+              ),
+              child: value
+                  ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Basisa tepki veren gradient buton
 // ─────────────────────────────────────────────────────────────
 class _PrimaryButton extends StatefulWidget {
@@ -569,9 +691,9 @@ class _Footer extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Text(
-            'Sürüm 1.0.3 · VPS API',
-            style: TextStyle(
+          child: Text(
+            'Sürüm ${AppConstants.appVersion} · VPS API',
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: AppColors.primary,
