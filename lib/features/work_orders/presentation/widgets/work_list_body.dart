@@ -54,6 +54,8 @@ class _WorkListBodyState extends ConsumerState<WorkListBody> {
   String _search = '';
   String? _filterType;
   String? _filterStatus;
+  String _filterCode = '';
+  String _filterCsbm = '';
   _SortKey _sortKey = _SortKey.code;
   bool _sortAsc = false;
 
@@ -68,7 +70,8 @@ class _WorkListBodyState extends ConsumerState<WorkListBody> {
     super.dispose();
   }
 
-  bool get _hasFilter => _filterType != null || _filterStatus != null;
+  bool get _hasFilter =>
+      _filterType != null || _filterStatus != null || _filterCode.isNotEmpty || _filterCsbm.isNotEmpty;
 
   List<MobileWork> _apply(List<MobileWork> src) {
     var list = src;
@@ -81,6 +84,17 @@ class _WorkListBodyState extends ConsumerState<WorkListBody> {
             (w.quarterName?.toLowerCase().contains(t) ?? false) ||
             (w.districtName?.toLowerCase().contains(t) ?? false);
       }).toList();
+    }
+    if (_filterCode.isNotEmpty) {
+      final c = _filterCode.toLowerCase();
+      list = list.where((w) => w.code.toLowerCase().contains(c)).toList();
+    }
+    if (_filterCsbm.isNotEmpty) {
+      final c = _filterCsbm.toLowerCase();
+      list = list.where((w) =>
+          (w.csbmName?.toLowerCase().contains(c) ?? false) ||
+          (w.quarterName?.toLowerCase().contains(c) ?? false) ||
+          (w.districtName?.toLowerCase().contains(c) ?? false)).toList();
     }
     if (_filterType != null) list = list.where((w) => w.workTypeName == _filterType).toList();
     if (_filterStatus != null) list = list.where((w) => w.stepStatusName == _filterStatus).toList();
@@ -225,67 +239,97 @@ class _WorkListBodyState extends ConsumerState<WorkListBody> {
     final statuses = all.map((w) => w.stepStatusName).where((s) => s.isNotEmpty).toSet().toList()..sort();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Bekleyen seçimler — "Uygula"da commit edilir.
+    var pType = _filterType;
+    var pStatus = _filterStatus;
+    final codeCtrl = TextEditingController(text: _filterCode);
+    final csbmCtrl = TextEditingController(text: _filterCsbm);
+
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: isDark ? AppColors.cardDark : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _SheetHandle(),
-                Row(
-                  children: [
-                    Text('Filtrele', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                    const Spacer(),
-                    if (_hasFilter)
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+        child: StatefulBuilder(
+          builder: (ctx, setSheet) => SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _SheetHandle(),
+                  Row(
+                    children: [
+                      Text('Filtrele', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      const Spacer(),
                       TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _filterType = null;
-                            _filterStatus = null;
-                          });
-                          setSheet(() {});
-                        },
+                        onPressed: () => setSheet(() {
+                          pType = null;
+                          pStatus = null;
+                          codeCtrl.clear();
+                          csbmCtrl.clear();
+                        }),
                         child: const Text('Temizle'),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _FilterGroup(
-                  title: 'İş Tipi',
-                  options: types,
-                  selected: _filterType,
-                  onSelected: (v) {
-                    setState(() => _filterType = v);
-                    setSheet(() {});
-                  },
-                ),
-                const SizedBox(height: 14),
-                _FilterGroup(
-                  title: 'Durum',
-                  options: statuses,
-                  selected: _filterStatus,
-                  onSelected: (v) {
-                    setState(() => _filterStatus = v);
-                    setSheet(() {});
-                  },
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Uygula')),
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  _filterField(label: 'Numara', controller: codeCtrl, hint: 'Örn. 100T029', icon: Icons.tag_rounded),
+                  const SizedBox(height: 14),
+                  _filterField(label: 'Csbm / Adres', controller: csbmCtrl, hint: 'Cadde, sokak, mahalle…', icon: Icons.place_outlined),
+                  const SizedBox(height: 16),
+                  _ChipFilter(title: 'İş Tipi', options: types, selected: pType, onSelected: (v) => setSheet(() => pType = v)),
+                  const SizedBox(height: 16),
+                  _ChipFilter(title: 'Durum', options: statuses, selected: pStatus, onSelected: (v) => setSheet(() => pStatus = v)),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        setState(() {
+                          _filterType = pType;
+                          _filterStatus = pStatus;
+                          _filterCode = codeCtrl.text.trim();
+                          _filterCsbm = csbmCtrl.text.trim();
+                        });
+                        Navigator.of(ctx).pop();
+                      },
+                      child: const Text('Uygula'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _filterField({required String label, required TextEditingController controller, required String hint, required IconData icon}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, size: 18),
+            filled: true,
+            fillColor: isDark ? AppColors.gray800 : AppColors.gray100,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
+      ],
     );
   }
 
@@ -457,15 +501,17 @@ class _IconBtn extends StatelessWidget {
   }
 }
 
-class _FilterGroup extends StatelessWidget {
+/// Okunur, kontrastı net seçim chip'leri (ChoiceChip tema sorunlarından kaçınmak için custom).
+class _ChipFilter extends StatelessWidget {
   final String title;
   final List<String> options;
   final String? selected;
   final ValueChanged<String?> onSelected;
-  const _FilterGroup({required this.title, required this.options, required this.selected, required this.onSelected});
+  const _ChipFilter({required this.title, required this.options, required this.selected, required this.onSelected});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -479,14 +525,35 @@ class _FilterGroup extends StatelessWidget {
             runSpacing: 8,
             children: [
               for (final o in options)
-                ChoiceChip(
-                  label: Text(o, overflow: TextOverflow.ellipsis),
-                  selected: selected == o,
-                  onSelected: (_) => onSelected(selected == o ? null : o),
-                ),
+                _chip(context, o, selected == o, isDark, () => onSelected(selected == o ? null : o)),
             ],
           ),
       ],
+    );
+  }
+
+  Widget _chip(BuildContext context, String label, bool sel, bool isDark, VoidCallback onTap) {
+    final fg = sel ? Colors.white : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
+    return Material(
+      color: sel ? AppColors.primary : (isDark ? AppColors.gray800 : AppColors.gray100),
+      borderRadius: BorderRadius.circular(9),
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(9),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (sel) ...[const Icon(Icons.check_rounded, size: 15, color: Colors.white), const SizedBox(width: 5)],
+              Text(label, style: TextStyle(color: fg, fontSize: 13, fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
