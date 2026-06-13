@@ -19,16 +19,37 @@ import '../widgets/adsum_bottom_nav.dart';
 import 'route_names.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  // ÖNEMLİ: Router YALNIZCA BİR KEZ oluşturulur. authState'i `ref.watch` ile
+  // izlersek her auth değişiminde yeni GoRouter üretilir, `initialLocation`
+  // splash'e sıfırlanır ve uygulama splash'te kilitlenir. Bunun yerine auth'u
+  // bir Listenable'a aktarıp `refreshListenable` ile redirect'i tetikleriz.
+  final authListenable = ValueNotifier<AsyncValue<AuthState>>(const AsyncLoading());
+  ref.listen<AsyncValue<AuthState>>(
+    authStateProvider,
+    (_, next) => authListenable.value = next,
+    fireImmediately: true,
+  );
+  ref.onDispose(authListenable.dispose);
 
   return GoRouter(
     initialLocation: RoutePaths.splash,
     debugLogDiagnostics: false,
+    refreshListenable: authListenable,
     redirect: (context, state) {
-      final isLoggedIn = authState.value?.isAuthenticated ?? false;
-      final isOnSplash = state.matchedLocation == RoutePaths.splash;
-      final isOnLogin = state.matchedLocation == RoutePaths.login;
-      if (isOnSplash) return null;
+      final auth = authListenable.value;
+      final loc = state.matchedLocation;
+      final isOnSplash = loc == RoutePaths.splash;
+      final isOnLogin = loc == RoutePaths.login;
+
+      // Auth henüz çözülmedi → splash'te bekle (yoksa splash'e getir).
+      if (auth.isLoading || !auth.hasValue) {
+        return isOnSplash ? null : RoutePaths.splash;
+      }
+
+      final isLoggedIn = auth.value?.isAuthenticated ?? false;
+
+      // Auth çözüldü; splash'teysek hedefe yönlendir.
+      if (isOnSplash) return isLoggedIn ? RoutePaths.home : RoutePaths.login;
       if (!isLoggedIn && !isOnLogin) return RoutePaths.login;
       if (isLoggedIn && isOnLogin) return RoutePaths.home;
       return null;

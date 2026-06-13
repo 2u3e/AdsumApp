@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../core/routing/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../providers/auth_provider.dart';
 
-/// Splash ekrani - profesyonel acilis animasyonu
-class SplashScreen extends ConsumerStatefulWidget {
+/// Splash ekrani - profesyonel acilis animasyonu.
+/// Yönlendirme (home/login) router redirect tarafından yapılır; bu ekran
+/// yalnızca görseldir (auth çözülene kadar gösterilir).
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen>
+class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fadeIn;
@@ -44,31 +42,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
 
     _controller.forward();
-    // Beklemeden hemen kontrol et; oturum hazır olduğunda anında yönlendir
-    // (uzun splash yok). Hazır değilse kısa aralıklarla tekrar dener.
-    _checkAuth();
-  }
-
-  int _authCheckAttempts = 0;
-
-  Future<void> _checkAuth() async {
-    if (!mounted) return;
-    final authState = ref.read(authStateProvider);
-    authState.when(
-      data: (state) {
-        context.go(state.isAuthenticated ? RoutePaths.home : RoutePaths.login);
-      },
-      // Auth henüz hazır değilse kısa aralıkla tekrar dene; en fazla ~7,5 sn sonra
-      // login'e düş (splash kilitlenmesin).
-      loading: () {
-        if (_authCheckAttempts++ < 30) {
-          Future.delayed(const Duration(milliseconds: 250), _checkAuth);
-        } else {
-          context.go(RoutePaths.login);
-        }
-      },
-      error: (_, _) => context.go(RoutePaths.login),
-    );
   }
 
   @override
