@@ -12,18 +12,18 @@ class MobileWorkCard extends StatelessWidget {
   final MobileWork work;
   final bool showScopeBadge;
 
-  /// Mevcut konuma mesafe metni (hazır biçimli). OSRM açıkken araçla, kapalıyken kuş uçuşu.
-  final String? distanceText;
+  /// Kuş uçuşu mesafe metni (hazır biçimli) — konum varsa.
+  final String? crowText;
 
-  /// distanceText araçla mı (true) yoksa kuş uçuşu mu (false) — ikon/etiket için.
-  final bool isDriving;
+  /// Araçla mesafe metni (hazır biçimli) — OSRM açık ve metrik varsa.
+  final String? driveText;
 
   const MobileWorkCard({
     super.key,
     required this.work,
     this.showScopeBadge = false,
-    this.distanceText,
-    this.isDriving = false,
+    this.crowText,
+    this.driveText,
   });
 
   @override
@@ -43,7 +43,7 @@ class MobileWorkCard extends StatelessWidget {
         child: InkWell(
           onTap: () {
             HapticFeedback.selectionClick();
-            showWorkDetailSheet(context, work, distanceText: distanceText, isDriving: isDriving);
+            showWorkDetailSheet(context, work, crowText: crowText, driveText: driveText);
           },
           splashColor: accent.withValues(alpha: 0.07),
           child: Container(
@@ -124,24 +124,20 @@ class MobileWorkCard extends StatelessWidget {
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: secondary, fontSize: 12),
                                   ),
                                 ),
-                                if (distanceText != null) ...[
+                                if (crowText != null || driveText != null) ...[
                                   const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: accent.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(5),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(isDriving ? Icons.directions_car_rounded : Icons.near_me_rounded,
-                                            size: 10, color: accent),
-                                        const SizedBox(width: 3),
-                                        Text(distanceText!,
-                                            style: TextStyle(color: accent, fontSize: 10.5, fontWeight: FontWeight.w700)),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Üstte kuş uçuşu, altta araçla (OSRM açıkken)
+                                      if (crowText != null)
+                                        _DistMini(icon: Icons.near_me_rounded, text: crowText!, color: muted),
+                                      if (driveText != null) ...[
+                                        if (crowText != null) const SizedBox(height: 2),
+                                        _DistMini(icon: Icons.directions_car_rounded, text: driveText!, color: accent, strong: true),
                                       ],
-                                    ),
+                                    ],
                                   ),
                                 ],
                               ],
@@ -167,6 +163,27 @@ class MobileWorkCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DistMini extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  final bool strong;
+  const _DistMini({required this.icon, required this.text, required this.color, this.strong = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 11, color: color),
+        const SizedBox(width: 3),
+        Text(text,
+            style: TextStyle(color: color, fontSize: 11, fontWeight: strong ? FontWeight.w700 : FontWeight.w500)),
+      ],
     );
   }
 }

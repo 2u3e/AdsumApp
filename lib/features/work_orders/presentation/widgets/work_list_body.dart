@@ -209,21 +209,21 @@ class _WorkListBodyState extends ConsumerState<WorkListBody> {
                         itemCount: filtered.length,
                         itemBuilder: (_, i) {
                           final w = filtered[i];
-                          String? distText;
-                          var driving = false;
+                          String? crow;
+                          String? drive;
+                          if (pos != null && w.hasLocation) {
+                            crow = formatDistance(
+                                distanceMeters(pos.latitude, pos.longitude, w.latitude!, w.longitude!));
+                          }
                           final dm = osrmOn ? _drive[w.id] : null;
                           if (dm != null && dm.distanceMeters != null) {
-                            distText = formatDistance(dm.distanceMeters!); // araçla yol mesafesi
-                            driving = true;
-                          } else if (pos != null && w.hasLocation) {
-                            distText = formatDistance(
-                                distanceMeters(pos.latitude, pos.longitude, w.latitude!, w.longitude!));
+                            drive = formatDistance(dm.distanceMeters!); // araçla yol mesafesi
                           }
                           return MobileWorkCard(
                             work: w,
                             showScopeBadge: widget.showScopeBadge,
-                            distanceText: distText,
-                            isDriving: driving,
+                            crowText: crow,
+                            driveText: drive,
                           );
                         },
                       ),

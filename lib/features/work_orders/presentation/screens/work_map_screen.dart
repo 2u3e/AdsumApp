@@ -117,7 +117,7 @@ class _WorkMapScreenState extends ConsumerState<WorkMapScreen> {
                     distanceText: _distLabel(me, _selected!),
                     onDirections: () => _openDirections(_selected!),
                     onDetail: () => showWorkDetailSheet(context, _selected!,
-                        distanceText: _distValue(me, _selected!), isDriving: _isDriving(_selected!)),
+                        crowText: _crowText(me, _selected!), driveText: _driveText(_selected!)),
                     isDark: isDark,
                   )
                 : (nearest != null
@@ -188,14 +188,33 @@ class _WorkMapScreenState extends ConsumerState<WorkMapScreen> {
   Marker _meMarker(LatLng me) => Marker(
         key: const ValueKey('me'),
         point: me,
-        width: 20,
-        height: 20,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.blueAccent,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
-          ),
+        width: 46,
+        height: 46,
+        alignment: Alignment.center,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Dış doğruluk halkası — "buradasın" hissi
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A73E8).withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF1A73E8).withValues(alpha: 0.35), width: 1),
+              ),
+            ),
+            // İç mavi nokta (Google "konumum" tarzı, beyaz halkalı)
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A73E8),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 3.5),
+              ),
+            ),
+          ],
         ),
       );
 
@@ -220,6 +239,15 @@ class _WorkMapScreenState extends ConsumerState<WorkMapScreen> {
   }
 
   bool _isDriving(MobileWork w) => _driveOf(w)?.durationSeconds != null;
+
+  String? _crowText(LatLng? me, MobileWork w) =>
+      me == null ? null : formatDistance(distanceMeters(me.latitude, me.longitude, w.latitude!, w.longitude!));
+
+  String? _driveText(MobileWork w) {
+    final dm = _driveOf(w);
+    if (dm?.distanceMeters == null) return null;
+    return '${formatDistance(dm!.distanceMeters!)} · ${formatDuration(dm.durationSeconds ?? 0)}';
+  }
 
   /// Mesafe değeri (etiketsiz): araçla "2,3 km · 4 dk" ya da kuş uçuşu "1,2 km".
   String _distValue(LatLng? me, MobileWork w) {

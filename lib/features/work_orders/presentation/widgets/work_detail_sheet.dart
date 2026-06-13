@@ -7,7 +7,7 @@ import 'work_visuals.dart';
 
 /// İş detayını ayrı sayfaya gitmeden gösteren, sürüklenebilir alttan sheet.
 /// Uzun açıklamalar burada serbestçe kaydırılır; kartta önizleme kırpılır.
-Future<void> showWorkDetailSheet(BuildContext context, MobileWork work, {String? distanceText, bool isDriving = false}) {
+Future<void> showWorkDetailSheet(BuildContext context, MobileWork work, {String? crowText, String? driveText}) {
   HapticFeedback.selectionClick();
   final isDark = Theme.of(context).brightness == Brightness.dark;
   return showModalBottomSheet<void>(
@@ -17,15 +17,15 @@ Future<void> showWorkDetailSheet(BuildContext context, MobileWork work, {String?
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
     ),
-    builder: (ctx) => _WorkDetailSheet(work: work, distanceText: distanceText, isDriving: isDriving),
+    builder: (ctx) => _WorkDetailSheet(work: work, crowText: crowText, driveText: driveText),
   );
 }
 
 class _WorkDetailSheet extends StatelessWidget {
   final MobileWork work;
-  final String? distanceText;
-  final bool isDriving;
-  const _WorkDetailSheet({required this.work, this.distanceText, this.isDriving = false});
+  final String? crowText;
+  final String? driveText;
+  const _WorkDetailSheet({required this.work, this.crowText, this.driveText});
 
   @override
   Widget build(BuildContext context) {
@@ -96,12 +96,10 @@ class _WorkDetailSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-                if (distanceText != null)
-                  _DetailRow(
-                    icon: isDriving ? Icons.directions_car_rounded : Icons.near_me_rounded,
-                    title: isDriving ? 'Araçla mesafe' : 'Kuş uçuşu mesafe',
-                    value: distanceText!,
-                  ),
+                if (crowText != null)
+                  _DetailRow(icon: Icons.near_me_rounded, title: 'Kuş uçuşu mesafe', value: crowText!),
+                if (driveText != null)
+                  _DetailRow(icon: Icons.directions_car_rounded, title: 'Araçla mesafe', value: driveText!),
                 if (work.addressSummary.isNotEmpty)
                   _DetailRow(icon: Icons.place_rounded, title: 'Adres', value: work.addressSummary),
                 if (work.buildingSummary != null)
