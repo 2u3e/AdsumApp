@@ -47,7 +47,10 @@ class _WorkMapScreenState extends ConsumerState<WorkMapScreen> {
     final settings = ref.watch(mapSettingsProvider);
     final me = _myLatLng;
     final located = _located;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureMatrix(me, located, settings.osrmEnabled));
+    // Yalnız OSRM açık + konum varken matrisi (gerekirse) çek — gereksiz postframe/yeniden çizimi önler.
+    if (settings.osrmEnabled && me != null && located.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _ensureMatrix(me, located, true));
+    }
 
     // Önce işlerin konumuna ortala (emülatör GPS'i alakasız yer döndürebilir); pin'ler hep görünür.
     final center = located.isNotEmpty

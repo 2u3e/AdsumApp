@@ -167,7 +167,9 @@ class _WorkListBodyState extends ConsumerState<WorkListBody> {
     final all = widget.works.valueOrNull ?? const <MobileWork>[];
     final pos = ref.watch(currentLocationProvider).valueOrNull;
     final osrmOn = ref.watch(mapSettingsProvider).osrmEnabled;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureDriveMatrix(all, pos, osrmOn));
+    if (osrmOn && pos != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _ensureDriveMatrix(all, pos, osrmOn));
+    }
 
     return Column(
       children: [
