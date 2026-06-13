@@ -58,7 +58,7 @@ class MobileWorkCard extends StatelessWidget {
                   Container(width: 3.5, color: accent),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+                      padding: const EdgeInsets.fromLTRB(11, 7, 11, 7),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -94,8 +94,8 @@ class MobileWorkCard extends StatelessWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          // Satır 2: iş tipi (+ scope rozeti)
+                          const SizedBox(height: 3),
+                          // Satır 2: iş tipi + mesafeler (yan yana) (+ scope rozeti)
                           Row(
                             children: [
                               Expanded(
@@ -107,11 +107,22 @@ class MobileWorkCard extends StatelessWidget {
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                                 ),
                               ),
-                              if (showScopeBadge) _ScopeBadge(scope: work.scope, isDark: isDark),
+                              if (crowText != null) ...[
+                                const SizedBox(width: 8),
+                                _DistMini(icon: Icons.near_me_rounded, text: crowText!, color: muted),
+                              ],
+                              if (driveText != null) ...[
+                                const SizedBox(width: 6),
+                                _DistMini(icon: Icons.directions_car_rounded, text: driveText!, color: accent, strong: true),
+                              ],
+                              if (showScopeBadge) ...[
+                                const SizedBox(width: 8),
+                                _ScopeBadge(scope: work.scope, isDark: isDark),
+                              ],
                             ],
                           ),
                           if (work.addressSummary.isNotEmpty) ...[
-                            const SizedBox(height: 5),
+                            const SizedBox(height: 3),
                             Row(
                               children: [
                                 Icon(Icons.location_on_rounded, size: 13, color: muted),
@@ -125,27 +136,11 @@ class MobileWorkCard extends StatelessWidget {
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: secondary, fontSize: 12),
                                   ),
                                 ),
-                                if (crowText != null || driveText != null) ...[
-                                  const SizedBox(width: 8),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      // Üstte kuş uçuşu, altta araçla (OSRM açıkken)
-                                      if (crowText != null)
-                                        _DistMini(icon: Icons.near_me_rounded, text: crowText!, color: muted),
-                                      if (driveText != null) ...[
-                                        if (crowText != null) const SizedBox(height: 2),
-                                        _DistMini(icon: Icons.directions_car_rounded, text: driveText!, color: accent, strong: true),
-                                      ],
-                                    ],
-                                  ),
-                                ],
                               ],
                             ),
                           ],
                           if (desc != null && desc.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 2),
                             Text(
                               desc,
                               maxLines: 1,
