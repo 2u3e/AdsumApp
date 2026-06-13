@@ -63,9 +63,12 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           .read(StorageKeys.accessToken)
           .timeout(const Duration(seconds: 4));
       if (token != null) {
-        var user = _parseUserFromToken(token);
-        user = await _enrichWithMe(user);
+        // Hızlı açılış: token geçerliyse token'dan gelen temel kullanıcıyla HEMEN
+        // oturumu aç (splash'te /Auth/me beklenmez). memberships + employeeId arkada
+        // yüklenir (_enrichInBackground) ve hazır olunca state güncellenir.
+        final user = _parseUserFromToken(token);
         _scheduleTokenRefresh();
+        _enrichInBackground(user);
         return AuthState(isAuthenticated: true, user: user);
       }
     } catch (_) {
@@ -75,6 +78,15 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
 
     return const AuthState(isAuthenticated: false);
+  }
+
+  /// /Auth/me ile memberships + employeeId'yi arka planda yükleyip state'i günceller.
+  Future<void> _enrichInBackground(User base) async {
+    final full = await _enrichWithMe(base);
+    final cur = state.valueOrNull;
+    if (cur != null && cur.isAuthenticated) {
+      state = AsyncValue.data(cur.copyWith(user: full));
+    }
   }
 
   /// Giris yap

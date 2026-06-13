@@ -75,7 +75,8 @@ class MobileWorkCard extends StatelessWidget {
                               const SizedBox(width: 8),
                               Container(width: 6, height: 6, decoration: BoxDecoration(color: accent, shape: BoxShape.circle)),
                               const SizedBox(width: 5),
-                              Flexible(
+                              // Durum ortayı doldurur → öncelik + tarih sağa yaslanır.
+                              Expanded(
                                 child: Text(
                                   work.stepStatusName,
                                   maxLines: 1,
@@ -86,7 +87,7 @@ class MobileWorkCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Icon(Icons.flag_rounded, size: 13, color: priorityColor(work.priority)),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Text(
                                 relativeDate(work.createdAt),
                                 style: Theme.of(context).textTheme.labelSmall?.copyWith(color: muted, fontSize: 11),

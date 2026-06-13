@@ -28,7 +28,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 800),
     );
 
     _logoScale = Tween<double>(begin: 0.5, end: 1.0).animate(
@@ -44,7 +44,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
 
     _controller.forward();
-    Future.delayed(const Duration(seconds: 2), _checkAuth);
+    // Beklemeden hemen kontrol et; oturum hazır olduğunda anında yönlendir
+    // (uzun splash yok). Hazır değilse kısa aralıklarla tekrar dener.
+    _checkAuth();
   }
 
   int _authCheckAttempts = 0;
@@ -56,11 +58,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       data: (state) {
         context.go(state.isAuthenticated ? RoutePaths.home : RoutePaths.login);
       },
-      // Auth durumu hazir degilse saniyede bir tekrar dene; ama asla sonsuza
-      // kadar bekleme — en fazla ~8 sn sonra login'e dus, splash kilitlenmesin.
+      // Auth henüz hazır değilse kısa aralıkla tekrar dene; en fazla ~7,5 sn sonra
+      // login'e düş (splash kilitlenmesin).
       loading: () {
-        if (_authCheckAttempts++ < 8) {
-          Future.delayed(const Duration(seconds: 1), _checkAuth);
+        if (_authCheckAttempts++ < 30) {
+          Future.delayed(const Duration(milliseconds: 250), _checkAuth);
         } else {
           context.go(RoutePaths.login);
         }
