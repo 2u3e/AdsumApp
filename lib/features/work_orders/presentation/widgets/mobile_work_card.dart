@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/services/location_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/mobile_work.dart';
 import 'work_detail_sheet.dart';
@@ -13,10 +12,19 @@ class MobileWorkCard extends StatelessWidget {
   final MobileWork work;
   final bool showScopeBadge;
 
-  /// Mevcut konuma kuş uçuşu mesafe (metre). Verilirse adres satırında rozet gösterilir.
-  final double? distanceMeters;
+  /// Mevcut konuma mesafe metni (hazır biçimli). OSRM açıkken araçla, kapalıyken kuş uçuşu.
+  final String? distanceText;
 
-  const MobileWorkCard({super.key, required this.work, this.showScopeBadge = false, this.distanceMeters});
+  /// distanceText araçla mı (true) yoksa kuş uçuşu mu (false) — ikon/etiket için.
+  final bool isDriving;
+
+  const MobileWorkCard({
+    super.key,
+    required this.work,
+    this.showScopeBadge = false,
+    this.distanceText,
+    this.isDriving = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +43,7 @@ class MobileWorkCard extends StatelessWidget {
         child: InkWell(
           onTap: () {
             HapticFeedback.selectionClick();
-            showWorkDetailSheet(context, work);
+            showWorkDetailSheet(context, work, distanceText: distanceText, isDriving: isDriving);
           },
           splashColor: accent.withValues(alpha: 0.07),
           child: Container(
@@ -116,7 +124,7 @@ class MobileWorkCard extends StatelessWidget {
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: secondary, fontSize: 12),
                                   ),
                                 ),
-                                if (distanceMeters != null) ...[
+                                if (distanceText != null) ...[
                                   const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -127,9 +135,10 @@ class MobileWorkCard extends StatelessWidget {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.near_me_rounded, size: 10, color: accent),
+                                        Icon(isDriving ? Icons.directions_car_rounded : Icons.near_me_rounded,
+                                            size: 10, color: accent),
                                         const SizedBox(width: 3),
-                                        Text(formatDistance(distanceMeters!),
+                                        Text(distanceText!,
                                             style: TextStyle(color: accent, fontSize: 10.5, fontWeight: FontWeight.w700)),
                                       ],
                                     ),

@@ -47,6 +47,7 @@ class _WorkMapScreenState extends ConsumerState<WorkMapScreen> {
     final settings = ref.watch(mapSettingsProvider);
     final me = _myLatLng;
     final located = _located;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureMatrix(me, located, settings.osrmEnabled));
 
     // Önce işlerin konumuna ortala (emülatör GPS'i alakasız yer döndürebilir); pin'ler hep görünür.
     final center = located.isNotEmpty
@@ -110,15 +111,16 @@ class _WorkMapScreenState extends ConsumerState<WorkMapScreen> {
             child: _selected != null
                 ? _WorkPanel(
                     work: _selected!,
-                    distanceText: _distText(me, _selected!),
+                    distanceText: _distLabel(me, _selected!),
                     onDirections: () => _openDirections(_selected!),
-                    onDetail: () => showWorkDetailSheet(context, _selected!),
+                    onDetail: () => showWorkDetailSheet(context, _selected!,
+                        distanceText: _distValue(me, _selected!), isDriving: _isDriving(_selected!)),
                     isDark: isDark,
                   )
                 : (nearest != null
                     ? _NearestBanner(
                         work: nearest,
-                        distanceText: _distText(me, nearest),
+                        distanceText: _distLabel(me, nearest),
                         onGo: () => _openDirections(nearest),
                         onShow: () {
                           setState(() => _selected = nearest);
@@ -208,16 +210,43 @@ class _WorkMapScreenState extends ConsumerState<WorkMapScreen> {
     return best;
   }
 
-  String _distText(LatLng? me, MobileWork w) {
-    // OSRM açık ve metrik varsa araçla süre/mesafe; yoksa kuş uçuşu.
+  /// İşin OSRM araç metriği (varsa) — index eşlemesiyle.
+  DriveMetric? _driveOf(MobileWork w) {
     final idx = _located.indexWhere((e) => e.id == w.id);
-    final dm = _drive[idx];
+    return idx >= 0 ? _drive[idx] : null;
+  }
+
+  bool _isDriving(MobileWork w) => _driveOf(w)?.durationSeconds != null;
+
+  /// Mesafe değeri (etiketsiz): araçla "2,3 km · 4 dk" ya da kuş uçuşu "1,2 km".
+  String _distValue(LatLng? me, MobileWork w) {
+    final dm = _driveOf(w);
     if (dm != null && dm.durationSeconds != null) {
-      return '${formatDuration(dm.durationSeconds!)} · ${formatDistance(dm.distanceMeters ?? 0)} (araç)';
+      return '${formatDistance(dm.distanceMeters ?? 0)} · ${formatDuration(dm.durationSeconds!)}';
     }
     if (me == null) return 'Konum kapalı';
-    final d = distanceMeters(me.latitude, me.longitude, w.latitude!, w.longitude!);
-    return '${formatDistance(d)} (kuş uçuşu)';
+    return formatDistance(distanceMeters(me.latitude, me.longitude, w.latitude!, w.longitude!));
+  }
+
+  /// Panel/banner için etiketli metin.
+  String _distLabel(LatLng? me, MobileWork w) {
+    if (me == null && !_isDriving(w)) return 'Konum kapalı';
+    return '${_distValue(me, w)} (${_isDriving(w) ? "araçla" : "kuş uçuşu"})';
+  }
+
+  String _matrixSig = '';
+
+  /// OSRM açıksa mevcut konumdan tüm işlere araç matrisini otomatik çeker (güzergaha gerek yok).
+  Future<void> _ensureMatrix(LatLng? me, List<MobileWork> located, bool osrmOn) async {
+    if (!osrmOn || me == null || located.isEmpty) return;
+    final sig = '${me.latitude.toStringAsFixed(4)},${me.longitude.toStringAsFixed(4)}|'
+        '${located.map((w) => w.id).join(',')}';
+    if (sig == _matrixSig) return;
+    _matrixSig = sig;
+    final svc = MapRouteService(ref.read(apiClientProvider));
+    final matrix = await svc.routeMatrix(me, located.map((w) => LatLng(w.latitude!, w.longitude!)).toList());
+    if (!mounted || matrix.isEmpty) return;
+    setState(() => _drive = matrix);
   }
 
   Future<void> _openDirections(MobileWork w) async {

@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:latlong2/latlong.dart';
+
+import '../../../../core/network/api_client.dart';
 import '../../../../core/services/location_provider.dart';
+import '../../../../core/services/map_settings_provider.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../data/map_route_service.dart';
 import '../../domain/entities/mobile_work.dart';
 import '../screens/work_map_screen.dart';
 import '../screens/work_state_views.dart';
@@ -51,6 +56,10 @@ class _WorkListBodyState extends ConsumerState<WorkListBody> {
   String? _filterStatus;
   _SortKey _sortKey = _SortKey.code;
   bool _sortAsc = false;
+
+  // OSRM araç mesafesi matrisi (workId → metrik) + son hesaplama imzası (gereksiz tekrar fetch'i önler).
+  Map<String, DriveMetric> _drive = {};
+  String _driveSig = '';
 
   @override
   void dispose() {
@@ -114,10 +123,37 @@ class _WorkListBodyState extends ConsumerState<WorkListBody> {
         .push(MaterialPageRoute(builder: (_) => WorkMapScreen(works: filtered)));
   }
 
+  /// OSRM açıksa mevcut konumdan tüm işlere araçla mesafe matrisini (tek istek) çeker.
+  /// İmza (konum + iş id'leri) değişmedikçe tekrar çağırmaz. Kapalıysa matrisi temizler.
+  Future<void> _ensureDriveMatrix(List<MobileWork> all, dynamic pos, bool osrmOn) async {
+    if (!osrmOn || pos == null) {
+      if (_drive.isNotEmpty) setState(() => _drive = {});
+      return;
+    }
+    final located = all.where((w) => w.hasLocation).toList();
+    if (located.isEmpty) return;
+    final sig = '${pos.latitude.toStringAsFixed(4)},${pos.longitude.toStringAsFixed(4)}|'
+        '${located.map((w) => w.id).join(',')}';
+    if (sig == _driveSig) return;
+    _driveSig = sig;
+
+    final svc = MapRouteService(ref.read(apiClientProvider));
+    final origin = LatLng(pos.latitude, pos.longitude);
+    final matrix = await svc.routeMatrix(origin, located.map((w) => LatLng(w.latitude!, w.longitude!)).toList());
+    if (!mounted) return;
+    final byId = <String, DriveMetric>{};
+    matrix.forEach((idx, m) {
+      if (idx >= 0 && idx < located.length) byId[located[idx].id] = m;
+    });
+    setState(() => _drive = byId);
+  }
+
   @override
   Widget build(BuildContext context) {
     final all = widget.works.valueOrNull ?? const <MobileWork>[];
     final pos = ref.watch(currentLocationProvider).valueOrNull;
+    final osrmOn = ref.watch(mapSettingsProvider).osrmEnabled;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureDriveMatrix(all, pos, osrmOn));
 
     return Column(
       children: [
@@ -157,13 +193,21 @@ class _WorkListBodyState extends ConsumerState<WorkListBody> {
                         itemCount: filtered.length,
                         itemBuilder: (_, i) {
                           final w = filtered[i];
-                          final dist = (pos != null && w.hasLocation)
-                              ? distanceMeters(pos.latitude, pos.longitude, w.latitude!, w.longitude!)
-                              : null;
+                          String? distText;
+                          var driving = false;
+                          final dm = osrmOn ? _drive[w.id] : null;
+                          if (dm != null && dm.distanceMeters != null) {
+                            distText = formatDistance(dm.distanceMeters!); // araçla yol mesafesi
+                            driving = true;
+                          } else if (pos != null && w.hasLocation) {
+                            distText = formatDistance(
+                                distanceMeters(pos.latitude, pos.longitude, w.latitude!, w.longitude!));
+                          }
                           return MobileWorkCard(
                             work: w,
                             showScopeBadge: widget.showScopeBadge,
-                            distanceMeters: dist,
+                            distanceText: distText,
+                            isDriving: driving,
                           );
                         },
                       ),

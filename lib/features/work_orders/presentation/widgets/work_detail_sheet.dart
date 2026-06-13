@@ -7,7 +7,7 @@ import 'work_visuals.dart';
 
 /// İş detayını ayrı sayfaya gitmeden gösteren, sürüklenebilir alttan sheet.
 /// Uzun açıklamalar burada serbestçe kaydırılır; kartta önizleme kırpılır.
-Future<void> showWorkDetailSheet(BuildContext context, MobileWork work) {
+Future<void> showWorkDetailSheet(BuildContext context, MobileWork work, {String? distanceText, bool isDriving = false}) {
   HapticFeedback.selectionClick();
   final isDark = Theme.of(context).brightness == Brightness.dark;
   return showModalBottomSheet<void>(
@@ -17,13 +17,15 @@ Future<void> showWorkDetailSheet(BuildContext context, MobileWork work) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
     ),
-    builder: (ctx) => _WorkDetailSheet(work: work),
+    builder: (ctx) => _WorkDetailSheet(work: work, distanceText: distanceText, isDriving: isDriving),
   );
 }
 
 class _WorkDetailSheet extends StatelessWidget {
   final MobileWork work;
-  const _WorkDetailSheet({required this.work});
+  final String? distanceText;
+  final bool isDriving;
+  const _WorkDetailSheet({required this.work, this.distanceText, this.isDriving = false});
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +96,12 @@ class _WorkDetailSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
+                if (distanceText != null)
+                  _DetailRow(
+                    icon: isDriving ? Icons.directions_car_rounded : Icons.near_me_rounded,
+                    title: isDriving ? 'Araçla mesafe' : 'Kuş uçuşu mesafe',
+                    value: distanceText!,
+                  ),
                 if (work.addressSummary.isNotEmpty)
                   _DetailRow(icon: Icons.place_rounded, title: 'Adres', value: work.addressSummary),
                 if (work.buildingSummary != null)
