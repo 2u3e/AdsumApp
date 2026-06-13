@@ -90,18 +90,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo - gradient circle with icon
+                // Logo - uygulama iconu (beyaz kart icinde)
                 Transform.scale(
                   scale: _logoScale.value,
                   child: Container(
                     width: 110,
                     height: 110,
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF2563EB), Color(0xFF3B82F6), Color(0xFF60A5FA)],
-                      ),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
@@ -111,7 +108,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.location_city_rounded, size: 56, color: Colors.white),
+                    child: Image.asset(
+                      'assets/icons/app_logo.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stack) => const Icon(
+                        Icons.location_city_rounded,
+                        size: 56,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),

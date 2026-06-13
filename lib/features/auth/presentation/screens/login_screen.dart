@@ -279,7 +279,7 @@ class _AuroraBackground extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Logo: gradient bina + yumusak float
+// Logo: uygulama iconu + yumusak float
 // ─────────────────────────────────────────────────────────────
 class _Logo extends StatelessWidget {
   final bool animate;
@@ -290,12 +290,9 @@ class _Logo extends StatelessWidget {
     final logo = Container(
       width: 92,
       height: 92,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2563EB), Color(0xFF3B82F6), Color(0xFF60A5FA)],
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
@@ -305,7 +302,15 @@ class _Logo extends StatelessWidget {
           ),
         ],
       ),
-      child: const Icon(Icons.location_city_rounded, size: 46, color: Colors.white),
+      child: Image.asset(
+        'assets/icons/app_logo.png',
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stack) => const Icon(
+          Icons.location_city_rounded,
+          size: 46,
+          color: AppColors.primary,
+        ),
+      ),
     );
     if (!animate) return logo;
     return logo
